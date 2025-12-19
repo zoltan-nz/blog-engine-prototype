@@ -1,25 +1,64 @@
 # Blog Engine Prototype
 
-Sandbox zone.
+A headless CMS for managing Astro-based static sites. Built as a framework comparison sandbox.
 
-Experimenting with
-- Astro
-- Headless CMS
-- Daisy UI
+## Quick Start
 
-Features:
-- be able to use Astro Templates
+```bash
+# Prerequisites: Podman + podman-compose
 
-Deployment:
-Free static site hosting using
-- GitHub Pages
-- Cloudflare Pages
+# Run with SvelteKit + Rust (sweet spot)
+podman-compose -f compose.yaml \
+  -f compose.frontend-svelte.yaml \
+  -f compose.backend-rust.yaml up
 
-The headless CMS can run locally or using Linode Cloud or the free tier of Oracle Cloud.
+# Access
+# Admin UI:  http://localhost:3000
+# API:       http://localhost:8000
+# Preview:   http://localhost:4321
+```
 
-Backend options:
-- Using Node.js with TypeScript (fastify), ORM?)
-- Using Rust with Axum
+## What Is This?
 
-Database:
-- Sqlite
+An **Admin App** (frontend + backend) that controls an **Astro static site generator**.
+
+- Non-techy users get a UI to manage content
+- Techy users can still edit Astro directly
+- Content stored as Markdown files (no database)
+- Deploy to GitHub Pages / Cloudflare Pages
+
+## Stack Variants
+
+| Frontend  | Backend      | Command                 |
+|-----------|--------------|-------------------------|
+| SvelteKit | Rust/Axum    | `./run.sh svelte rust`  |
+| SvelteKit | Node/Fastify | `./run.sh svelte node`  |
+| React     | Rust/Axum    | `./run.sh react rust`   |
+| React     | Node/Fastify | `./run.sh react node`   |
+
+## Documentation
+
+- [Architecture](./ARCHITECTURE.md) — System design, decisions, API format
+- [Project Plan](./CLAUDE.md) — Current phase, TODOs, progress
+
+## Development
+
+```bash
+# Run integration tests
+cd tests/integration && npx playwright test
+
+# Generate types from OpenAPI contract
+npm run generate:types
+```
+
+## Tech Stack
+
+- **Frontends:** SvelteKit, React (DaisyUI)
+- **Backends:** Node.js/Fastify, Rust/Axum
+- **Static Site:** Astro
+- **Containers:** Podman + Compose (Alpine Linux)
+- **API Contract:** OpenAPI 3.1
+
+## License
+
+MIT
