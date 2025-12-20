@@ -177,7 +177,7 @@ podman-compose -f compose.yaml \
 
 ```
 /blog-engine-prototype
-├── contracts/
+├── open-api-contracts/
 │   └── api.yaml                 # OpenAPI 3.1 specification
 │
 ├── admin-app/
@@ -188,8 +188,7 @@ podman-compose -f compose.yaml \
 │
 ├── astro-server/                # Astro instance (controlled)
 │
-├── tests/
-│   └── integration/             # Playwright tests
+├── integration-tests/           # Playwright tests
 │
 ├── compose.yaml                 # Base compose
 ├── compose.frontend-*.yaml      # Frontend overrides
