@@ -58,3 +58,4 @@
 - Backends: Node/Fastify/TypeScript, Rust/Axum
 - Testing: Playwright for integration tests
 - Types: Generate from the OpenAPI contract
+- Node package manager: use pnpm
