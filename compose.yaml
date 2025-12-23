@@ -1,0 +1,25 @@
+name: blog-engine
+
+networks:
+  blog-net:
+    driver: bridge
+
+volumes:
+  astro-sites:
+
+services:
+  astro-server:
+    build:
+      context: ./astro-server
+      dockerfile: Dockerfile
+    networks:
+      - blog-net
+    volumes:
+      - astro-sites:/app/astro-sites
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('ok')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "4321:4321"

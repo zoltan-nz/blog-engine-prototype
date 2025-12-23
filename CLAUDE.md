@@ -23,12 +23,12 @@
 - [x] Define envelope schema `{ data, meta }`
 - [x] Define RFC 7807 error schema
 
-### Step 4: Compose & Astro Server ⬜
-- [ ] Create base `compose.yaml` with shared network
-- [ ] Initialize Astro project in `astro-server/`
-- [ ] Create Dockerfile (Alpine + Node)
-- [ ] Add astro-server service to compose
-- [ ] Test: astro server responds
+### Step 4: Compose & Astro Server ✅
+- [x] Create base `compose.yaml` with shared network
+- [x] Create Astro runtime in `astro-server/` (no default project)
+- [x] Create Dockerfile (Alpine + Node + pnpm)
+- [x] Add astro-server service to compose
+- [x] Test: astro server container is healthy
 
 ### Step 5: Backend - Node ⬜
 - [ ] Initialize Fastify + TypeScript in `admin-cms-app/backend-node/`
@@ -84,6 +84,9 @@
 | 2024-12-19 | Alpine Linux base | Minimal resources |
 | 2024-12-19 | SvelteKit + Rust sweet spot | Preferred combination |
 | 2024-12-21 | `/healthz` endpoint | K8s compatible health checks |
+| 2024-12-23 | No default Astro project | Sites created dynamically by admin |
+| 2024-12-23 | Single active site model | One dev server at a time, switch on demand |
+| 2024-12-23 | Container-level healthcheck | Simple node command, no HTTP server needed |
 
 ---
 

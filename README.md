@@ -45,7 +45,7 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 
 ```bash
 # Run integration tests
-cd tests/integration && npx playwright test
+cd tests/integration && pnpm exec playwright test
 
 # Generate types from OpenAPI contract
 npm run generate:types
