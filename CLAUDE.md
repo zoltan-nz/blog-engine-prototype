@@ -30,12 +30,12 @@
 - [x] Add astro-server service to compose
 - [x] Test: astro server container is healthy
 
-### Step 5: Backend - Node ⬜
-- [ ] Initialize Fastify + TypeScript in `admin-cms-app/backend-node/`
-- [ ] Implement `GET /healthz`
-- [ ] Create Dockerfile (Alpine + Node)
-- [ ] Create `compose.backend-node.yaml`
-- [ ] Test: health endpoint returns envelope
+### Step 5: Backend - Node ✅
+- [x] Initialize Fastify + TypeScript in `admin-cms-app/backend-node/`
+- [x] Implement `GET /healthz`
+- [x] Create Dockerfile (Alpine + Node)
+- [x] Create `compose.backend-node.yaml`
+- [x] Test: health endpoint returns envelope
 
 ### Step 6: Backend - Rust ⬜
 - [ ] Initialize Axum project in `admin-cms-app/backend-rust/`
@@ -99,6 +99,8 @@
 - **Sweet spot:** SvelteKit + Rust is the preferred combo
 - **Folder structure:** Admin app variants live under `admin-cms-app/` (backend-node, backend-rust, frontend-svelte, frontend-react)
 - **Node.js tsconfig:** Use `tsc --init` as baseline, then add `allowSyntheticDefaultImports: true` for CommonJS default imports
+- **Alpine/musl DNS:** Alpine uses musl libc, which handles DNS differently than glibc. Use `127.0.0.1` instead of `localhost` inside containers. Services must bind to `0.0.0.0` to be reachable.
+- **TDD workflow:** Run integration tests in watch mode during development. Keep the red/green feedback visible for motivation and gamification.
 
 ---
 
@@ -112,6 +114,9 @@ podman-compose -f compose.yaml \
 
 # Run Playwright tests
 cd integration-tests && pnpm exec playwright test
+
+# Run Playwright in watch mode (TDD)
+cd integration-tests && pnpm exec playwright test --ui
 
 # Generate types from OpenAPI
 pnpm run generate:types
