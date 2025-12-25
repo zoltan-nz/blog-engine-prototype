@@ -64,6 +64,7 @@
 - [ ] Document any issues
 
 ### Step 10: First Feature — Create Astro Site ⬜
+- [ ] Set up OpenAPI → TypeScript type generation
 - [ ] Write integration test: click button → site created
 - [ ] Add API endpoint: `POST /api/sites`
 - [ ] Add UI button: "Create Astro Blog"
@@ -97,6 +98,7 @@
 - **All variants:** Build all 4 frontend/backend combinations
 - **Sweet spot:** SvelteKit + Rust is the preferred combo
 - **Folder structure:** Admin app variants live under `admin-cms-app/` (backend-node, backend-rust, frontend-svelte, frontend-react)
+- **Node.js tsconfig:** Use `tsc --init` as baseline, then add `allowSyntheticDefaultImports: true` for CommonJS default imports
 
 ---
 
