@@ -1,0 +1,24 @@
+FROM rust:slim-trixie
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install cargo-watch for hot-reload
+RUN cargo install cargo-watch
+
+WORKDIR /app
+
+# Copy manifests first for dependency caching
+COPY Cargo.toml Cargo.lock* ./
+
+# Create dummy src to build dependencies
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release || true
+RUN rm -rf src
+
+# Copy actual source
+COPY src ./src
+
+EXPOSE 8080
+
+# Hot-reload in development
+CMD ["cargo", "watch", "-x", "run"]

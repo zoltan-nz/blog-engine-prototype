@@ -5,10 +5,10 @@ A headless CMS for managing Astro-based static sites. Built as a framework compa
 ## Quick Start
 
 ```bash
-# Prerequisites: Podman + podman-compose
+# Prerequisites: Podman + podman compose
 
 # Run with SvelteKit + Rust (sweet spot)
-podman-compose -f compose.yaml \
+podman compose -f compose.yaml \
   -f compose.frontend-svelte.yaml \
   -f compose.backend-rust.yaml up
 
@@ -40,6 +40,8 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 
 - [Architecture](./ARCHITECTURE.md) — System design, decisions, API format
 - [Project Plan](./CLAUDE.md) — Current phase, TODOs, progress
+- [Implementation Notes](./NOTES.md) — Findings, benchmarks, comparisons
+- [Agent Guidelines](./AGENTS.md) — AI assistant instructions and coding standards
 
 ## Development
 
@@ -58,6 +60,27 @@ npm run generate:types
 - **Static Site:** Astro
 - **Containers:** Podman + Compose (Alpine Linux)
 - **API Contract:** OpenAPI 3.1
+
+## Setup Tools with `mise`
+
+We use [mise](https://mise.jdx.dev/) for tool version management and task running.
+
+```bash
+# Install required tools (Node, pnpm, Rust)
+mise install
+
+# List available tasks
+mise tasks
+
+# Common tasks
+mise run up          # Start all services (both backends)
+mise run up-rust     # Start with Rust backend only
+mise run up-node     # Start with Node backend only
+mise run down        # Stop all services
+mise run test        # Run integration tests
+mise run health      # Check all health endpoints
+mise run stats       # Show container resource usage
+```
 
 ## License
 

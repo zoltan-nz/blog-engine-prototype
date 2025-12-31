@@ -37,12 +37,12 @@
 - [x] Create `compose.backend-node.yaml`
 - [x] Test: health endpoint returns envelope
 
-### Step 6: Backend - Rust ⬜
-- [ ] Initialize Axum project in `admin-cms-app/backend-rust/`
-- [ ] Implement `GET /healthz`
-- [ ] Create Dockerfile (Alpine + Rust)
-- [ ] Create `compose.backend-rust.yaml`
-- [ ] Test: health endpoint returns envelope
+### Step 6: Backend - Rust ✅
+- [x] Initialize Axum project in `admin-cms-app/backend-rust/`
+- [x] Implement `GET /healthz`
+- [x] Create Dockerfile (Debian slim + Rust)
+- [x] Create `compose.backend-rust.yaml`
+- [x] Test: health endpoint returns envelope
 
 ### Step 7: Frontend - SvelteKit ⬜
 - [ ] Initialize SvelteKit + DaisyUI in `admin-cms-app/frontend-svelte/`
@@ -81,18 +81,27 @@
 | 2024-12-19 | RFC 7807 for errors | Industry standard |
 | 2024-12-19 | Simple envelope `{ data, meta }` | Easy serialization |
 | 2024-12-19 | Filesystem as source of truth | No database needed |
-| 2024-12-19 | Podman + compose | Rootless containers |
+| 2024-12-19 | Podman + `podman compose` | Rootless containers (not podman-compose) |
 | 2024-12-19 | Alpine Linux base | Minimal resources |
 | 2024-12-19 | SvelteKit + Rust sweet spot | Preferred combination |
 | 2024-12-21 | `/healthz` endpoint | K8s compatible health checks |
 | 2024-12-23 | No default Astro project | Sites created dynamically by admin |
 | 2024-12-23 | Single active site model | One dev server at a time, switch on demand |
 | 2024-12-23 | Container-level healthcheck | Simple node command, no HTTP server needed |
+| 2024-12-25 | Debian slim for Rust, not Alpine | Faster glibc builds; Alpine musl is slow for Rust |
+| 2024-12-29 | SPA mode for frontends | No SSR needed; admin UI doesn't need SEO; simpler architecture |
+| 2024-12-29 | adapter-static for SvelteKit | SPA with client-side routing via fallback: 'index.html' |
+| 2024-12-31 | mise for task running | Unified commands via `mise run <task>`; see `mise tasks` for list |
+| 2024-12-31 | compose.all.yaml for comparison | Run all backends simultaneously (Rust:8080, Node:8081) |
+| 2024-12-31 | inlineSources in tsconfig | Source maps embed TypeScript for debugging without shipping src/ |
+| 2024-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
 
 ---
 
 ## Notes
 
+- **Always read first:** At the start of each session, read `AGENTS.md`, `README.md`, and `NOTES.md` for context.
+- **Task runner:** Use `mise tasks` to list available commands, `mise run <task>` to execute.
 - **TDD approach:** Write test first (RED), then implement (GREEN)
 - **Tiny steps:** Each task should be small and testable
 - **All variants:** Build all 4 frontend/backend combinations
@@ -101,23 +110,42 @@
 - **Node.js tsconfig:** Use `tsc --init` as baseline, then add `allowSyntheticDefaultImports: true` for CommonJS default imports
 - **Alpine/musl DNS:** Alpine uses musl libc, which handles DNS differently than glibc. Use `127.0.0.1` instead of `localhost` inside containers. Services must bind to `0.0.0.0` to be reachable.
 - **TDD workflow:** Run integration tests in watch mode during development. Keep the red/green feedback visible for motivation and gamification.
+- **Rust Best Practices:** Added to `agents.md` for reuse. Key patterns: enums over strings, `impl IntoResponse`, `#[derive(Default)]`, structured logging with `tracing`.
+- **Feature-driven development:** Implement to satisfy tests, not to mirror other implementations. Each language has its own idioms.
 
 ---
 
 ## Commands Reference
 
 ```bash
-# Run sweet spot (SvelteKit + Rust)
-podman-compose -f compose.yaml \
-  -f compose.frontend-svelte.yaml \
-  -f compose.backend-rust.yaml up
+# List all available tasks
+mise tasks
 
-# Run Playwright tests
-cd integration-tests && pnpm exec playwright test
+# Start all services (both backends for comparison)
+mise run up              # Rust:8080, Node:8081, Astro:4321
 
-# Run Playwright in watch mode (TDD)
-cd integration-tests && pnpm exec playwright test --ui
+# Start single backend stack
+mise run up-rust         # Rust backend only
+mise run up-node         # Node backend only
 
-# Generate types from OpenAPI
-pnpm run generate:types
+# Stop services
+mise run down
+
+# Health checks
+mise run health          # Check all endpoints
+mise run health-rust     # Check Rust only
+mise run health-node     # Check Node only
+
+# Testing
+mise run test            # Run Playwright tests
+mise run test-ui         # TDD mode with UI
+
+# Container stats
+mise run stats           # Image sizes and memory usage
+
+# Standalone prod containers (quick testing)
+mise run prod-rust       # Build & run Rust prod (8080)
+mise run prod-node       # Build & run Node prod (8081)
+mise run prod-both       # Both prod containers
+mise run prod-stop       # Stop prod containers
 ```

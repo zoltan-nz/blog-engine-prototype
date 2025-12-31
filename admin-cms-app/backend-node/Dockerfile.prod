@@ -1,0 +1,41 @@
+# Build stage
+FROM node:25-alpine AS builder
+
+RUN npm config set fund false && npm install -g pnpm
+
+WORKDIR /app
+
+# Copy package files for dependency caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including devDependencies for tsc)
+RUN pnpm install --frozen-lockfile
+
+# Copy source files
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build TypeScript to JavaScript with source maps
+RUN pnpm build
+
+# Production stage
+FROM node:25-alpine
+
+RUN npm config set fund false && npm install -g pnpm
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install only production dependencies
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy compiled JavaScript and source maps from builder
+# Source maps include inlined TypeScript via inlineSources: true
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 8081
+
+# Enable source maps for proper TypeScript line numbers in stack traces
+CMD ["node", "--enable-source-maps", "dist/server.js"]

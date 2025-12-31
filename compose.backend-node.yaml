@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: ./admin-cms-app/backend-node
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     networks:
       - blog-net
     ports:

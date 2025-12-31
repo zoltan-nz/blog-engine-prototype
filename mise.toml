@@ -1,0 +1,90 @@
+[tools]
+node = "25.2.1"
+pnpm = "latest"
+rust = "1.92.0"
+
+# =============================================================================
+# Compose Tasks (Primary Workflow)
+# =============================================================================
+
+[tasks.up]
+description = "Start all services (both backends) for comparison"
+run = "podman compose -f compose.yaml -f compose.all.yaml up --remove-orphans"
+
+[tasks.up-d]
+description = "Start all services detached"
+run = "podman compose -f compose.yaml -f compose.all.yaml up -d"
+
+[tasks.up-rust]
+description = "Start stack with Rust backend only"
+run = "podman compose -f compose.yaml -f compose.backend-rust.yaml up"
+
+[tasks.up-node]
+description = "Start stack with Node backend only"
+run = "podman compose -f compose.yaml -f compose.backend-node.yaml up"
+
+[tasks.down]
+description = "Stop and remove compose stack"
+run = "podman compose down"
+
+[tasks.logs]
+description = "Follow compose logs"
+run = "podman compose logs -f"
+
+# =============================================================================
+# Testing Tasks
+# =============================================================================
+
+[tasks.test]
+description = "Run Playwright integration tests"
+run = "cd integration-tests && pnpm exec playwright test"
+
+[tasks.test-ui]
+description = "Run Playwright tests in UI mode (TDD workflow)"
+run = "cd integration-tests && pnpm exec playwright test --ui"
+
+# =============================================================================
+# Health Check Tasks
+# =============================================================================
+
+[tasks.health-rust]
+description = "Check Rust backend health (port 8080)"
+run = "curl -s http://127.0.0.1:8080/healthz | jq ."
+
+[tasks.health-node]
+description = "Check Node backend health (port 8081)"
+run = "curl -s http://127.0.0.1:8081/healthz | jq ."
+
+[tasks.health]
+description = "Check all backend health endpoints"
+depends = ["health-rust", "health-node"]
+
+# =============================================================================
+# Container Stats
+# =============================================================================
+
+[tasks.stats]
+description = "Show container resource usage"
+run = """
+echo "=== Image Sizes ===" && podman image ls --format "table {{.Repository}}\\t{{.Size}}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && podman stats --no-stream --format "table {{.Name}}\\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
+"""
+
+# =============================================================================
+# Standalone Prod Containers (Quick Testing)
+# =============================================================================
+
+[tasks.prod-rust]
+description = "Build and run standalone Rust prod container (port 8080)"
+run = "podman stop -i backend-rust-prod; podman rm -i backend-rust-prod; podman build -f admin-cms-app/backend-rust/Dockerfile.prod -t backend-rust-prod admin-cms-app/backend-rust && podman run -d -p 8080:8080 --name backend-rust-prod localhost/backend-rust-prod:latest"
+
+[tasks.prod-node]
+description = "Build and run standalone Node prod container (port 8081)"
+run = "podman stop -i backend-node-prod; podman rm -i backend-node-prod; podman build -f admin-cms-app/backend-node/Dockerfile.prod -t backend-node-prod admin-cms-app/backend-node && podman run -d -p 8081:8080 --name backend-node-prod localhost/backend-node-prod:latest"
+
+[tasks.prod-both]
+description = "Build and run both prod containers"
+depends = ["prod-rust", "prod-node"]
+
+[tasks.prod-stop]
+description = "Stop standalone prod containers"
+run = "podman stop -i backend-rust-prod backend-node-prod 2>/dev/null; echo 'Stopped prod containers'"
