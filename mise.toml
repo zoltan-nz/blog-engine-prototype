@@ -32,7 +32,7 @@ description = "Follow compose logs"
 run = "podman compose logs -f"
 
 # =============================================================================
-# Testing Tasks
+# Integration Tests (Playwright - runs outside compose)
 # =============================================================================
 
 [tasks.test]
@@ -42,6 +42,37 @@ run = "cd integration-tests && pnpm exec playwright test"
 [tasks.test-ui]
 description = "Run Playwright tests in UI mode (TDD workflow)"
 run = "cd integration-tests && pnpm exec playwright test --ui"
+
+# =============================================================================
+# Unit Tests (run outside compose, watch mode)
+# =============================================================================
+
+[tasks.test-unit-rust]
+description = "Run Rust backend unit tests in watch mode"
+run = "cd admin-cms-app/backend-rust && cargo watch -x test"
+
+[tasks.test-unit-node]
+description = "Run Node backend unit tests in watch mode"
+run = "cd admin-cms-app/backend-node && pnpm exec vitest --watch"
+
+[tasks.test-unit-svelte]
+description = "Run SvelteKit frontend unit tests in watch mode"
+run = "cd admin-cms-app/frontend-svelte && pnpm exec vitest --watch"
+
+[tasks.test-unit-react]
+description = "Run React frontend unit tests in watch mode"
+run = "cd admin-cms-app/frontend-react && pnpm exec vitest --watch"
+
+[tasks.test-unit]
+description = "Run all unit tests (parallel, not watch mode)"
+run = """
+echo "=== Running all unit tests ===" && \
+(cd admin-cms-app/backend-rust && cargo test) && \
+(cd admin-cms-app/backend-node && pnpm exec vitest run) && \
+(cd admin-cms-app/frontend-svelte && pnpm exec vitest run) && \
+(cd admin-cms-app/frontend-react && pnpm exec vitest run) && \
+echo "=== All unit tests passed ==="
+"""
 
 # =============================================================================
 # Health Check Tasks

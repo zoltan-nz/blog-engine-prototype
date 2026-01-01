@@ -77,24 +77,26 @@
 
 | Date | Decision | Context |
 |------|----------|---------|
-| 2024-12-19 | OpenAPI 3.1 for contract | Shared types between TS and Rust |
-| 2024-12-19 | RFC 7807 for errors | Industry standard |
-| 2024-12-19 | Simple envelope `{ data, meta }` | Easy serialization |
-| 2024-12-19 | Filesystem as source of truth | No database needed |
-| 2024-12-19 | Podman + `podman compose` | Rootless containers (not podman-compose) |
-| 2024-12-19 | Alpine Linux base | Minimal resources |
-| 2024-12-19 | SvelteKit + Rust sweet spot | Preferred combination |
-| 2024-12-21 | `/healthz` endpoint | K8s compatible health checks |
-| 2024-12-23 | No default Astro project | Sites created dynamically by admin |
-| 2024-12-23 | Single active site model | One dev server at a time, switch on demand |
-| 2024-12-23 | Container-level healthcheck | Simple node command, no HTTP server needed |
-| 2024-12-25 | Debian slim for Rust, not Alpine | Faster glibc builds; Alpine musl is slow for Rust |
-| 2024-12-29 | SPA mode for frontends | No SSR needed; admin UI doesn't need SEO; simpler architecture |
-| 2024-12-29 | adapter-static for SvelteKit | SPA with client-side routing via fallback: 'index.html' |
-| 2024-12-31 | mise for task running | Unified commands via `mise run <task>`; see `mise tasks` for list |
-| 2024-12-31 | compose.all.yaml for comparison | Run all backends simultaneously (Rust:8080, Node:8081) |
-| 2024-12-31 | inlineSources in tsconfig | Source maps embed TypeScript for debugging without shipping src/ |
-| 2024-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
+| 2025-12-19 | OpenAPI 3.1 for contract | Shared types between TS and Rust |
+| 2025-12-19 | RFC 7807 for errors | Industry standard |
+| 2025-12-19 | Simple envelope `{ data, meta }` | Easy serialization |
+| 2025-12-19 | Filesystem as source of truth | No database needed |
+| 2025-12-19 | Podman + `podman compose` | Rootless containers (not podman-compose) |
+| 2025-12-19 | Alpine Linux base | Minimal resources |
+| 2025-12-19 | SvelteKit + Rust sweet spot | Preferred combination |
+| 2025-12-21 | `/healthz` endpoint | K8s compatible health checks |
+| 2025-12-23 | No default Astro project | Sites created dynamically by admin |
+| 2025-12-23 | Single active site model | One dev server at a time, switch on demand |
+| 2025-12-23 | Container-level healthcheck | Simple node command, no HTTP server needed |
+| 2025-12-25 | Debian slim for Rust, not Alpine | Faster glibc builds; Alpine musl is slow for Rust |
+| 2025-12-29 | SPA mode for frontends | No SSR needed; admin UI doesn't need SEO; simpler architecture |
+| 2025-12-29 | adapter-static for SvelteKit | SPA with client-side routing via fallback: 'index.html' |
+| 2025-12-31 | mise for task running | Unified commands via `mise run <task>`; see `mise tasks` for list |
+| 2025-12-31 | compose.all.yaml for comparison | Run all backends simultaneously (Rust:8080, Node:8081) |
+| 2025-12-31 | inlineSources in tsconfig | Source maps embed TypeScript for debugging without shipping src/ |
+| 2025-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
+| 2025-12-31 | Tests run outside compose | Playwright + unit tests run on host for fast TDD feedback |
+| 2025-12-31 | vitest for JS/TS unit tests | Fast, Vite-native, watch mode; cargo-watch for Rust |
 
 ---
 
@@ -136,9 +138,16 @@ mise run health          # Check all endpoints
 mise run health-rust     # Check Rust only
 mise run health-node     # Check Node only
 
-# Testing
-mise run test            # Run Playwright tests
-mise run test-ui         # TDD mode with UI
+# Integration tests (Playwright - runs outside compose)
+mise run test            # Run once
+mise run test-ui         # TDD mode with UI (watch)
+
+# Unit tests (watch mode - run in separate terminals)
+mise run test-unit-rust    # Rust backend (cargo watch)
+mise run test-unit-node    # Node backend (vitest)
+mise run test-unit-svelte  # SvelteKit frontend (vitest)
+mise run test-unit-react   # React frontend (vitest)
+mise run test-unit         # Run all unit tests once
 
 # Container stats
 mise run stats           # Image sizes and memory usage
@@ -148,4 +157,13 @@ mise run prod-rust       # Build & run Rust prod (8080)
 mise run prod-node       # Build & run Node prod (8081)
 mise run prod-both       # Both prod containers
 mise run prod-stop       # Stop prod containers
+```
+
+## TDD Workflow (Multiple Terminals)
+
+```
+Terminal 1: mise run up              # Services with hot reload
+Terminal 2: mise run test-ui         # Playwright watch (integration)
+Terminal 3: mise run test-unit-rust  # Rust unit tests watch
+Terminal 4: mise run test-unit-node  # Node unit tests watch
 ```
