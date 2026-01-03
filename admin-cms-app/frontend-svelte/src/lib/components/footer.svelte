@@ -25,7 +25,7 @@
   });
 </script>
 
-<footer class="border-base-300 bg-base-100 border-t px-8 py-4">
+<footer class="border-t border-base-300 bg-base-100 px-8 py-4">
   <div class="mx-auto flex max-w-4xl items-center justify-between text-sm">
     <span class="text-base-content/60">Backend: {backendUrl}</span>
     <button
@@ -35,7 +35,7 @@
       title={connected ? "Connected" : "Disconnected"}
     >
       {#if loading}
-        <span class="loading loading-spinner loading-xs"></span>
+        <span class="loading loading-xs loading-spinner"></span>
       {:else}
         <span
           class="h-3 w-3 rounded-full {connected ? 'bg-success' : 'bg-error'}"

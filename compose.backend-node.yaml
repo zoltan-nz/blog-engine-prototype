@@ -6,11 +6,11 @@ services:
     networks:
       - blog-net
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
       - ./admin-cms-app/backend-node/src:/app/src:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
       interval: 10s
       timeout: 5s
       retries: 3
