@@ -39,16 +39,25 @@ services:
       timeout: 5s
       retries: 3
 
-  # TODO: Add when frontends are implemented
-  # frontend-svelte:
-  #   build:
-  #     context: ./admin-cms-app/frontend-svelte
-  #     dockerfile: Dockerfile.dev
-  #   networks:
-  #     - blog-net
-  #   ports:
-  #     - "3000:3000"
-  #
+  frontend-svelte:
+    build:
+      context: ./admin-cms-app/frontend-svelte
+      dockerfile: Dockerfile.dev
+    networks:
+      - blog-net
+    ports:
+      - "3000:3000"
+    environment:
+      - PUBLIC_BACKEND_URL=http://localhost:8080
+    volumes:
+      - ./admin-cms-app/frontend-svelte/src:/app/src:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # TODO: Add when React frontend is implemented
   # frontend-react:
   #   build:
   #     context: ./admin-cms-app/frontend-react

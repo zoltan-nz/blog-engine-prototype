@@ -23,6 +23,10 @@ run = "podman compose -f compose.yaml -f compose.backend-rust.yaml up"
 description = "Start stack with Node backend only"
 run = "podman compose -f compose.yaml -f compose.backend-node.yaml up"
 
+[tasks.up-svelte]
+description = "Start SvelteKit + Rust backend (sweet spot combo)"
+run = "podman compose -f compose.yaml -f compose.backend-rust.yaml -f compose.frontend-svelte.yaml up"
+
 [tasks.down]
 description = "Stop and remove compose stack"
 run = "podman compose down"
@@ -86,9 +90,13 @@ run = "curl -s http://127.0.0.1:8080/healthz | jq ."
 description = "Check Node backend health (port 8081)"
 run = "curl -s http://127.0.0.1:8081/healthz | jq ."
 
+[tasks.health-svelte]
+description = "Check SvelteKit frontend (port 3000)"
+run = "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000 && echo ' OK'"
+
 [tasks.health]
-description = "Check all backend health endpoints"
-depends = ["health-rust", "health-node"]
+description = "Check all health endpoints"
+depends = ["health-rust", "health-node", "health-svelte"]
 
 # =============================================================================
 # Container Stats

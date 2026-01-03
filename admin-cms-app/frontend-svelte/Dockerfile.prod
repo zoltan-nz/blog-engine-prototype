@@ -1,0 +1,35 @@
+# Build stage
+FROM node:25-alpine AS builder
+
+RUN npm config set fund false && npm install -g pnpm
+
+WORKDIR /app
+
+# Copy package files for dependency caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile
+
+# Copy source and config files
+COPY svelte.config.ts vite.config.ts tsconfig.json ./
+COPY src ./src
+COPY static ./static
+
+# Build static site
+RUN pnpm build
+
+# Production stage - lightweight server for static files
+FROM node:25-alpine
+
+RUN npm config set fund false && npm install -g serve
+
+WORKDIR /app
+
+# Copy built static files from builder
+COPY --from=builder /app/build ./build
+
+EXPOSE 3000
+
+# Serve static files with SPA fallback
+CMD ["serve", "-s", "build", "-l", "3000"]

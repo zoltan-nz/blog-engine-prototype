@@ -45,17 +45,17 @@
 - [x] Test: health endpoint returns envelope
 
 ### Step 7: Frontend - SvelteKit ⬜
-- [ ] Initialize SvelteKit + DaisyUI in `admin-cms-app/frontend-svelte/`
-- [ ] Create basic page with health status display
-- [ ] Create Dockerfile (Alpine + Node)
-- [ ] Create `compose.frontend-svelte.yaml`
+- [x] Initialize SvelteKit + DaisyUI in `admin-cms-app/frontend-svelte/`
+- [x] Create basic page with health status display
+- [x] Create Dockerfile (Alpine + Node)
+- [ ] Add service to compose.yaml with profile
 - [ ] Test: page loads
 
 ### Step 8: Frontend - React ⬜
 - [ ] Initialize React + DaisyUI in `admin-cms-app/frontend-react/`
 - [ ] Create basic page with health status display
 - [ ] Create Dockerfile (Alpine + Node)
-- [ ] Create `compose.frontend-react.yaml`
+- [ ] Add service to compose.yaml with profile
 - [ ] Test: page loads
 
 ### Step 9: Full Stack Smoke Test ⬜
@@ -92,7 +92,8 @@
 | 2025-12-29 | SPA mode for frontends | No SSR needed; admin UI doesn't need SEO; simpler architecture |
 | 2025-12-29 | adapter-static for SvelteKit | SPA with client-side routing via fallback: 'index.html' |
 | 2025-12-31 | mise for task running | Unified commands via `mise run <task>`; see `mise tasks` for list |
-| 2025-12-31 | compose.all.yaml for comparison | Run all backends simultaneously (Rust:8080, Node:8081) |
+| 2025-12-31 | ~~compose.all.yaml for comparison~~ | ~~Run all backends simultaneously~~ (superseded) |
+| 2026-01-01 | Compose profiles, not multiple files | Single compose.yaml with `--profile` flag instead of `-f file1 -f file2` |
 | 2025-12-31 | inlineSources in tsconfig | Source maps embed TypeScript for debugging without shipping src/ |
 | 2025-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
 | 2025-12-31 | Tests run outside compose | Playwright + unit tests run on host for fast TDD feedback |
@@ -167,3 +168,27 @@ Terminal 2: mise run test-ui         # Playwright watch (integration)
 Terminal 3: mise run test-unit-rust  # Rust unit tests watch
 Terminal 4: mise run test-unit-node  # Node unit tests watch
 ```
+
+## Available MCP Tools for Svelte:
+
+You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+
+### 1. list-sections
+
+Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
+When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+
+### 2. get-documentation
+
+Retrieves full documentation content for specific sections. Accepts single or multiple sections.
+After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+
+### 3. svelte-autofixer
+
+Analyzes Svelte code and returns issues and suggestions.
+You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+
+### 4. playground-link
+
+Generates a Svelte Playground link with the provided code.
+After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.
