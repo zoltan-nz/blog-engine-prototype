@@ -44,12 +44,12 @@
 - [x] Create `compose.backend-rust.yaml`
 - [x] Test: health endpoint returns envelope
 
-### Step 7: Frontend - SvelteKit ⬜
+### Step 7: Frontend - SvelteKit ✅
 - [x] Initialize SvelteKit + DaisyUI in `admin-cms-app/frontend-svelte/`
 - [x] Create basic page with health status display
 - [x] Create Dockerfile (Alpine + Node)
-- [ ] Add service to compose.yaml with profile
-- [ ] Test: page loads
+- [x] Add service to compose.yaml with profile
+- [x] Test: page loads (CORS enabled, frontend ↔ backend communication works)
 
 ### Step 8: Frontend - React ⬜
 - [ ] Initialize React + DaisyUI in `admin-cms-app/frontend-react/`
@@ -98,12 +98,15 @@
 | 2025-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
 | 2025-12-31 | Tests run outside compose | Playwright + unit tests run on host for fast TDD feedback |
 | 2025-12-31 | vitest for JS/TS unit tests | Fast, Vite-native, watch mode; cargo-watch for Rust |
+| 2026-01-03 | CORS permissive in dev | `CorsLayer::new().allow_origin(Any)` for local development |
+| 2026-01-03 | DaisyUI handles form styling | Removed `@tailwindcss/forms` — DaisyUI already provides form components |
+| 2026-01-03 | Consolidated compose files | Deleted compose.all.yaml, compose.backend-*.yaml, compose.frontend-*.yaml; single compose.yaml with profiles |
 
 ---
 
 ## Notes
 
-- **Always read first:** At the start of each session, read `AGENTS.md`, `README.md`, and `NOTES.md` for context.
+- **Always read first:** At the start of each session, read `AGENTS.md`, `README.md`, and `ARCHITECTURE.md` for context.
 - **Task runner:** Use `mise tasks` to list available commands, `mise run <task>` to execute.
 - **TDD approach:** Write test first (RED), then implement (GREEN)
 - **Tiny steps:** Each task should be small and testable
@@ -115,6 +118,7 @@
 - **TDD workflow:** Run integration tests in watch mode during development. Keep the red/green feedback visible for motivation and gamification.
 - **Rust Best Practices:** Added to `agents.md` for reuse. Key patterns: enums over strings, `impl IntoResponse`, `#[derive(Default)]`, structured logging with `tracing`.
 - **Feature-driven development:** Implement to satisfy tests, not to mirror other implementations. Each language has its own idioms.
+- **Svelte component testing:** Mock `$env/dynamic/public` with `vi.mock()` before importing components. Use `it()` for test cases (not `describe()` — its body runs immediately before `beforeEach`).
 
 ---
 
@@ -124,10 +128,9 @@
 # List all available tasks
 mise tasks
 
-# Start all services (both backends for comparison)
-mise run up              # Rust:8080, Node:8081, Astro:4321
-
-# Start single backend stack
+# Start services (using compose profiles)
+mise run up              # All: Rust:8080, Node:8081, Svelte:3000, Astro:4321
+mise run up-svelte       # Sweet spot: Rust + Svelte (recommended)
 mise run up-rust         # Rust backend only
 mise run up-node         # Node backend only
 
@@ -138,6 +141,7 @@ mise run down
 mise run health          # Check all endpoints
 mise run health-rust     # Check Rust only
 mise run health-node     # Check Node only
+mise run health-svelte   # Check Svelte frontend
 
 # Integration tests (Playwright - runs outside compose)
 mise run test            # Run once

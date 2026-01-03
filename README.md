@@ -38,9 +38,8 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 
 ## Documentation
 
-- [Architecture](./ARCHITECTURE.md) — System design, decisions, API format
+- [Architecture](./ARCHITECTURE.md) — System design, decisions, API format, findings, benchmarks, comparisons
 - [Project Plan](./CLAUDE.md) — Current phase, TODOs, progress
-- [Implementation Notes](./NOTES.md) — Findings, benchmarks, comparisons
 - [Agent Guidelines](./AGENTS.md) — AI assistant instructions and coding standards
 
 ## Development

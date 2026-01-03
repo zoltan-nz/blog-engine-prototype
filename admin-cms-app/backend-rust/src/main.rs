@@ -1,8 +1,9 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -75,12 +76,18 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let app = Router::new().route("/healthz", get(healthz));
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    let app = Router::new().route("/healthz", get(healthz)).layer(cors);
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080);
     info!(%addr, "Server listening");
 
-
-    let listener = tokio::net::TcpListener::bind(addr).await.expect("Failed to bind to address");
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .expect("Failed to bind to address");
     axum::serve(listener, app).await.expect("Server error");
 }

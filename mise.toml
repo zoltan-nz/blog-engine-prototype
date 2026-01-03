@@ -8,24 +8,24 @@ rust = "1.92.0"
 # =============================================================================
 
 [tasks.up]
-description = "Start all services (both backends) for comparison"
-run = "podman compose -f compose.yaml -f compose.all.yaml up --remove-orphans"
+description = "Start all services (both backends + svelte) for comparison"
+run = "podman compose --profile rust --profile node --profile svelte up --remove-orphans"
 
 [tasks.up-d]
 description = "Start all services detached"
-run = "podman compose -f compose.yaml -f compose.all.yaml up -d"
+run = "podman compose --profile rust --profile node --profile svelte up -d"
 
 [tasks.up-rust]
 description = "Start stack with Rust backend only"
-run = "podman compose -f compose.yaml -f compose.backend-rust.yaml up"
+run = "podman compose --profile rust up"
 
 [tasks.up-node]
 description = "Start stack with Node backend only"
-run = "podman compose -f compose.yaml -f compose.backend-node.yaml up"
+run = "podman compose --profile node up"
 
 [tasks.up-svelte]
 description = "Start SvelteKit + Rust backend (sweet spot combo)"
-run = "podman compose -f compose.yaml -f compose.backend-rust.yaml -f compose.frontend-svelte.yaml up"
+run = "podman compose --profile rust --profile svelte up"
 
 [tasks.down]
 description = "Stop and remove compose stack"

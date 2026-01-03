@@ -12,8 +12,8 @@
 # Key Files to Read
 
 - **README.md** — Project overview and quick start
+- **ARCHITECTURE.md** — Architecture overview, design decisions, Implementation findings, benchmarks, resource comparisons
 - **CLAUDE.md** — Project plan, TODOs, decisions log
-- **NOTES.md** — Implementation findings, benchmarks, resource comparisons
 - **AGENTS.md** — This file; AI assistant guidelines
 - **mise.toml** — Task runner commands (run `mise tasks` to list all)
 

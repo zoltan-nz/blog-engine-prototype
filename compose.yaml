@@ -23,3 +23,56 @@ services:
       retries: 3
     ports:
       - '4321:4321'
+
+  backend-rust:
+    profiles: [rust]
+    build:
+      context: ./admin-cms-app/backend-rust
+      dockerfile: Dockerfile.dev
+    networks:
+      - blog-net
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend-node:
+    profiles: [node]
+    build:
+      context: ./admin-cms-app/backend-node
+      dockerfile: Dockerfile.dev
+    networks:
+      - blog-net
+    ports:
+      - '8081:8080'
+    volumes:
+      - ./admin-cms-app/backend-node/src:/app/src:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend-svelte:
+    profiles: [svelte]
+    build:
+      context: ./admin-cms-app/frontend-svelte
+      dockerfile: Dockerfile.dev
+    networks:
+      - blog-net
+    ports:
+      - '3000:3000'
+    environment:
+      - PUBLIC_BACKEND_URL=http://localhost:8080
+    volumes:
+      - ./admin-cms-app/frontend-svelte/src:/app/src:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
