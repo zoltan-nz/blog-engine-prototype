@@ -5,12 +5,16 @@ A headless CMS for managing Astro-based static sites. Built as a framework compa
 ## Quick Start
 
 ```bash
-# Prerequisites: Podman + podman compose
+# Prerequisites: Podman + podman compose + mise
+
+# Run all the servers together
+mise run up
+
+# List all the tasks
+mise tasks
 
 # Run with SvelteKit + Rust (sweet spot)
-podman compose -f compose.yaml \
-  -f compose.frontend-svelte.yaml \
-  -f compose.backend-rust.yaml up
+podman compose --profile rust --profile svelte
 
 # Access
 # Admin UI:  http://localhost:3000

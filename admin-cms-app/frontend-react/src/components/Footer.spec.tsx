@@ -1,16 +1,11 @@
 import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-svelte";
-import Footer from "./footer.svelte";
-
-vi.mock("$env/dynamic/public", () => ({
-  env: {
-    PUBLIC_API_BACKEND_URL: "http://test-backend.test:8080",
-  },
-}));
+import { render } from "vitest-browser-react";
+import Footer from "./Footer";
 
 describe("Footer", () => {
   beforeEach(() => {
+    vi.stubEnv("VITE_API_BACKEND_URL", "http://test-backend.test:8080");
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -20,16 +15,16 @@ describe("Footer", () => {
       json: async () => ({ data: { status: "healthy" } }),
     } as Response);
 
-    render(Footer);
+    const screen = await render(<Footer />);
 
-    await expect.element(page.getByText("Connected")).toBeInTheDocument();
+    await expect.element(screen.getByText("Connected")).toBeInTheDocument();
   });
 
   it("shows Disconnected when health check fails", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("Network error"));
 
-    render(Footer);
+    const screen = await render(<Footer />);
 
-    await expect.element(page.getByText("Disconnected")).toBeInTheDocument();
+    await expect.element(screen.getByText("Disconnected")).toBeInTheDocument();
   });
 });

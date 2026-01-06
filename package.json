@@ -6,6 +6,6 @@
   },
   "scripts": {
     "format": "prettier --write --cache -u -l .",
-    "format:check": "prettier --check -u -l ."
+    "format:check": "prettier --check -u ."
   }
 }

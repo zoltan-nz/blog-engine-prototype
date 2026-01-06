@@ -5,7 +5,7 @@
   let connected = $state(false);
   let loading = $state(true);
 
-  const backendUrl = env.PUBLIC_BACKEND_URL || "http://localhost:8080";
+  const backendUrl = env.PUBLIC_API_BACKEND_URL || "http://localhost:8080";
 
   async function checkConnection() {
     loading = true;
@@ -25,7 +25,10 @@
   });
 </script>
 
-<footer class="border-t border-base-300 bg-base-100 px-8 py-4">
+<footer
+  class="border-t border-base-300 bg-base-100 px-8 py-4"
+  data-testid="footer"
+>
   <div class="mx-auto flex max-w-4xl items-center justify-between text-sm">
     <span class="text-base-content/60">Backend: {backendUrl}</span>
     <button

@@ -1,11 +1,12 @@
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
+import tsconfigPaths from "vite-tsconfig-paths";
 import devtoolsJson from "vite-plugin-devtools-json";
 import { playwright } from "@vitest/browser-playwright";
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
+  plugins: [tailwindcss(), sveltekit(), devtoolsJson(), tsconfigPaths()],
 
   test: {
     expect: { requireAssertions: true },

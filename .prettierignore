@@ -3,3 +3,6 @@ node_modules
 *.md
 pnpm-lock.yaml
 **/target/**
+**/build/**
+**/.svelte-kit/*
+**/.react-router/*

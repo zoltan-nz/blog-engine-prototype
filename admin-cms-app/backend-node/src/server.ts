@@ -1,8 +1,10 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import type { HealthResponse } from './types.js';
 import { randomUUID } from 'node:crypto';
 
 const fastify = Fastify({ logger: true });
+await fastify.register(cors);
 
 fastify.get('/healthz', async (): Promise<HealthResponse> => {
   return {
@@ -26,4 +28,4 @@ const start = async () => {
   }
 };
 
-start();
+await start();

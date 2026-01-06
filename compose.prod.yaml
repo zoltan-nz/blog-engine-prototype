@@ -1,4 +1,4 @@
-name: blog-engine
+name: blog-engine-prod
 
 networks:
   blog-net:
@@ -16,11 +16,6 @@ services:
       - blog-net
     volumes:
       - astro-sites:/app/astro-sites
-    healthcheck:
-      test: ['CMD', 'node', '-e', "console.log('ok')"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     ports:
       - '4321:4321'
 
@@ -28,7 +23,7 @@ services:
     profiles: [rust]
     build:
       context: ./admin-cms-app/backend-rust
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     networks:
       - blog-net
     ports:
@@ -43,15 +38,13 @@ services:
     profiles: [node]
     build:
       context: ./admin-cms-app/backend-node
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     networks:
       - blog-net
     ports:
       - '8081:8080'
-    volumes:
-      - ./admin-cms-app/backend-node/src:/app/src:ro
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8081/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -60,18 +53,15 @@ services:
     profiles: [svelte]
     build:
       context: ./admin-cms-app/frontend-svelte
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
+      args:
+        - PUBLIC_API_BACKEND_URL=http://localhost:8080
     networks:
       - blog-net
     ports:
-      - '3000:3000'
-    environment:
-      # Use the Rust server as backend for Svelte.
-      - PUBLIC_API_BACKEND_URL=http://localhost:8080
-    volumes:
-      - ./admin-cms-app/frontend-svelte/src:/app/src:ro
+      - '3000:80'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -80,18 +70,15 @@ services:
     profiles: [react]
     build:
       context: ./admin-cms-app/frontend-react
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_API_BACKEND_URL=http://localhost:8081
     networks:
       - blog-net
     ports:
-      - '3001:3001'
-    environment:
-      # Let's use the Node.js server as backend for React.
-      - VITE_API_BACKEND_URL=http://localhost:8081
-    volumes:
-      - ./admin-cms-app/frontend-react/src:/app/src:ro
+      - '3001:80'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80']
       interval: 10s
       timeout: 5s
       retries: 3

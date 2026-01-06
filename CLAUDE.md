@@ -1,3 +1,7 @@
+@AGENTS.md
+@README.md
+@ARCHITECTURE.md
+
 # Project Plan
 
 ## Current Phase: Phase 0 — Scaffold & Smoke Test
@@ -51,17 +55,26 @@
 - [x] Add service to compose.yaml with profile
 - [x] Test: page loads (CORS enabled, frontend ↔ backend communication works)
 
-### Step 8: Frontend - React ⬜
-- [ ] Initialize React + DaisyUI in `admin-cms-app/frontend-react/`
-- [ ] Create basic page with health status display
-- [ ] Create Dockerfile (Alpine + Node)
-- [ ] Add service to compose.yaml with profile
-- [ ] Test: page loads
+### Step 8: Frontend - React ✅
+- [x] Initialize React Router v7 (SPA mode) + DaisyUI in `admin-cms-app/frontend-react/`
+- [x] Create basic page with health status display
+- [x] Create Dockerfile (Alpine + Node)
+- [x] Add service to compose.yaml with profile
+- [x] Test: page loads
 
-### Step 9: Full Stack Smoke Test ⬜
-- [ ] Run all 4 combinations
-- [ ] All Playwright tests pass
-- [ ] Document any issues
+### Step 9: Full Stack Smoke Test ✅
+- [x] Run all 4 dev combinations (Svelte+Rust, Svelte+Node, React+Rust, React+Node)
+- [x] All Playwright tests pass (dev)
+- [x] Add mise tasks for combination testing (`test-svelte-rust`, `test-all-combos`, etc.)
+- [x] Fix compose.prod.yaml to use Dockerfile.prod
+- [x] Add build args for VITE_API_BACKEND_URL in frontend Dockerfile.prod files
+- [x] Add mise tasks for production (`up-prod`, `up-prod-svelte`, etc.)
+- [x] Production Svelte+Rust passes all smoke tests
+- [x] Production React+Node passes all smoke tests
+- [x] Documented: Prod frontends have backend URLs baked in at build time (Vite limitation)
+  - Svelte → Rust (8080) is the intended prod pairing
+  - React → Node (8081) is the intended prod pairing
+  - Cross-pairing (e.g. Svelte+Node) requires rebuilding the frontend image
 
 ### Step 10: First Feature — Create Astro Site ⬜
 - [ ] Set up OpenAPI → TypeScript type generation
@@ -75,32 +88,39 @@
 
 ## Decisions Log
 
-| Date | Decision | Context |
-|------|----------|---------|
-| 2025-12-19 | OpenAPI 3.1 for contract | Shared types between TS and Rust |
-| 2025-12-19 | RFC 7807 for errors | Industry standard |
-| 2025-12-19 | Simple envelope `{ data, meta }` | Easy serialization |
-| 2025-12-19 | Filesystem as source of truth | No database needed |
-| 2025-12-19 | Podman + `podman compose` | Rootless containers (not podman-compose) |
-| 2025-12-19 | Alpine Linux base | Minimal resources |
-| 2025-12-19 | SvelteKit + Rust sweet spot | Preferred combination |
-| 2025-12-21 | `/healthz` endpoint | K8s compatible health checks |
-| 2025-12-23 | No default Astro project | Sites created dynamically by admin |
-| 2025-12-23 | Single active site model | One dev server at a time, switch on demand |
-| 2025-12-23 | Container-level healthcheck | Simple node command, no HTTP server needed |
-| 2025-12-25 | Debian slim for Rust, not Alpine | Faster glibc builds; Alpine musl is slow for Rust |
-| 2025-12-29 | SPA mode for frontends | No SSR needed; admin UI doesn't need SEO; simpler architecture |
-| 2025-12-29 | adapter-static for SvelteKit | SPA with client-side routing via fallback: 'index.html' |
-| 2025-12-31 | mise for task running | Unified commands via `mise run <task>`; see `mise tasks` for list |
-| 2025-12-31 | ~~compose.all.yaml for comparison~~ | ~~Run all backends simultaneously~~ (superseded) |
-| 2026-01-01 | Compose profiles, not multiple files | Single compose.yaml with `--profile` flag instead of `-f file1 -f file2` |
-| 2025-12-31 | inlineSources in tsconfig | Source maps embed TypeScript for debugging without shipping src/ |
-| 2025-12-31 | Multi-stage Dockerfiles | Prod images only contain compiled artifacts, not dev dependencies |
-| 2025-12-31 | Tests run outside compose | Playwright + unit tests run on host for fast TDD feedback |
-| 2025-12-31 | vitest for JS/TS unit tests | Fast, Vite-native, watch mode; cargo-watch for Rust |
-| 2026-01-03 | CORS permissive in dev | `CorsLayer::new().allow_origin(Any)` for local development |
-| 2026-01-03 | DaisyUI handles form styling | Removed `@tailwindcss/forms` — DaisyUI already provides form components |
-| 2026-01-03 | Consolidated compose files | Deleted compose.all.yaml, compose.backend-*.yaml, compose.frontend-*.yaml; single compose.yaml with profiles |
+| Date       | Decision                             | Context                                                                                                      |
+|------------|--------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| 2025-12-19 | OpenAPI 3.1 for contract             | Shared types between TS and Rust                                                                             |
+| 2025-12-19 | RFC 7807 for errors                  | Industry standard                                                                                            |
+| 2025-12-19 | Simple envelope `{ data, meta }`     | Easy serialization                                                                                           |
+| 2025-12-19 | Filesystem as source of truth        | No database needed                                                                                           |
+| 2025-12-19 | Podman + `podman compose`            | Rootless containers (not podman-compose)                                                                     |
+| 2025-12-19 | Alpine Linux base                    | Minimal resources                                                                                            |
+| 2025-12-19 | SvelteKit + Rust sweet spot          | Preferred combination                                                                                        |
+| 2025-12-21 | `/healthz` endpoint                  | K8s compatible health checks                                                                                 |
+| 2025-12-23 | No default Astro project             | Sites created dynamically by admin                                                                           |
+| 2025-12-23 | Single active site model             | One dev server at a time, switch on demand                                                                   |
+| 2025-12-23 | Container-level healthcheck          | Simple node command, no HTTP server needed                                                                   |
+| 2025-12-25 | Debian slim for Rust, not Alpine     | Faster glibc builds; Alpine musl is slow for Rust                                                            |
+| 2025-12-29 | SPA mode for frontends               | No SSR needed; admin UI doesn't need SEO; simpler architecture                                               |
+| 2025-12-29 | adapter-static for SvelteKit         | SPA with client-side routing via fallback: 'index.html'                                                      |
+| 2025-12-31 | mise for task running                | Unified commands via `mise run <task>`; see `mise tasks` for list                                            |
+| 2025-12-31 | ~~compose.all.yaml for comparison~~  | ~~Run all backends simultaneously~~ (superseded)                                                             |
+| 2026-01-01 | Compose profiles, not multiple files | Single compose.yaml with `--profile` flag instead of `-f file1 -f file2`                                     |
+| 2025-12-31 | inlineSources in tsconfig            | Source maps embed TypeScript for debugging without shipping src/                                             |
+| 2025-12-31 | Multi-stage Dockerfiles              | Prod images only contain compiled artifacts, not dev dependencies                                            |
+| 2025-12-31 | Tests run outside compose            | Playwright + unit tests run on host for fast TDD feedback                                                    |
+| 2025-12-31 | vitest for JS/TS unit tests          | Fast, Vite-native, watch mode; cargo-watch for Rust                                                          |
+| 2026-01-03 | CORS permissive in dev               | `CorsLayer::new().allow_origin(Any)` for local development                                                   |
+| 2026-01-03 | DaisyUI handles form styling         | Removed `@tailwindcss/forms` — DaisyUI already provides form components                                      |
+| 2026-01-03 | Consolidated compose files           | Deleted compose.all.yaml, compose.backend-*.yaml, compose.frontend-*.yaml; single compose.yaml with profiles |
+| 2026-01-03 | React Router v7 for React Frontend   | Matches SvelteKit framework scope; configured as SPA (Client Data)                                           |
+| 2026-01-03 | Nginx for SvelteKit Prod             | Using `nginx:alpine` to serve static files in production for better performance                              |
+| 2026-01-05 | VITE_API_BACKEND_URL for frontends   | Unified env var across React and SvelteKit; Vite requires VITE_ prefix by default                           |
+| 2026-01-06 | Build-time env vars for Vite prod    | VITE_* must be passed as ARG in Dockerfile.prod; Vite embeds values at build time                           |
+| 2026-01-06 | Separate compose.prod.yaml           | Uses Dockerfile.prod, no volume mounts; port mapping 3000:80 keeps same external ports as dev               |
+| 2026-01-06 | Smoke test verifies "Connected"      | Proves frontend actually reaches backend; not just HTTP 200, but actual API communication                   |
+| 2026-01-06 | Fixed prod pairings                  | Svelte↔Rust (8080), React↔Node (8081); cross-pairing in prod requires frontend rebuild                     |
 
 ---
 
@@ -146,6 +166,9 @@ mise run health-svelte   # Check Svelte frontend
 # Integration tests (Playwright - runs outside compose)
 mise run test            # Run once
 mise run test-ui         # TDD mode with UI (watch)
+mise run test-svelte-rust  # E2E: Svelte + Rust
+mise run test-react-node   # E2E: React + Node
+mise run test-all-combos   # E2E: All 4 combinations
 
 # Unit tests (watch mode - run in separate terminals)
 mise run test-unit-rust    # Rust backend (cargo watch)
@@ -157,11 +180,9 @@ mise run test-unit         # Run all unit tests once
 # Container stats
 mise run stats           # Image sizes and memory usage
 
-# Standalone prod containers (quick testing)
-mise run prod-rust       # Build & run Rust prod (8080)
-mise run prod-node       # Build & run Node prod (8081)
-mise run prod-both       # Both prod containers
-mise run prod-stop       # Stop prod containers
+# Production compose stack
+mise run prod-up         # All prod services (builds images)
+mise run prod-down       # Stop prod stack
 ```
 
 ## TDD Workflow (Multiple Terminals)

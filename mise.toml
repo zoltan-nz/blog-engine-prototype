@@ -1,7 +1,8 @@
 [tools]
-node = "25.2.1"
+hey = "latest"
+node = "latest"
 pnpm = "latest"
-rust = "1.92.0"
+rust = "latest"
 
 # =============================================================================
 # Compose Tasks (Primary Workflow)
@@ -9,7 +10,7 @@ rust = "1.92.0"
 
 [tasks.up]
 description = "Start all services (both backends + svelte) for comparison"
-run = "podman compose --profile rust --profile node --profile svelte up --remove-orphans"
+run = "podman compose --profile rust --profile node --profile svelte --profile react up --remove-orphans"
 
 [tasks.up-d]
 description = "Start all services detached"
@@ -27,6 +28,10 @@ run = "podman compose --profile node up"
 description = "Start SvelteKit + Rust backend (sweet spot combo)"
 run = "podman compose --profile rust --profile svelte up"
 
+[tasks.up-react]
+description = "Start React + Node backend"
+run = "podman compose --profile node --profile react up"
+
 [tasks.down]
 description = "Stop and remove compose stack"
 run = "podman compose down"
@@ -39,13 +44,29 @@ run = "podman compose logs -f"
 # Integration Tests (Playwright - runs outside compose)
 # =============================================================================
 
-[tasks.test]
-description = "Run Playwright integration tests"
-run = "cd integration-tests && pnpm exec playwright test"
+[tasks.test-svelte-rust]
+description = "E2E test: Svelte + Rust (sweet spot)"
+run = "FRONTEND_URL=http://localhost:3000 BACKEND_URL=http://localhost:8080 pnpm exec playwright test"
+dir = "integration-tests"
 
-[tasks.test-ui]
-description = "Run Playwright tests in UI mode (TDD workflow)"
-run = "cd integration-tests && pnpm exec playwright test --ui"
+[tasks.test-svelte-node]
+description = "E2E test: Svelte + Node"
+run = "FRONTEND_URL=http://localhost:3000 BACKEND_URL=http://localhost:8081 pnpm exec playwright test"
+dir = "integration-tests"
+
+[tasks.test-react-rust]
+description = "E2E test: React + Rust"
+run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8080 pnpm exec playwright test"
+dir = "integration-tests"
+
+[tasks.test-react-node]
+description = "E2E test: React + Node"
+run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8081 pnpm exec playwright test"
+dir = "integration-tests"
+
+[tasks.test-all-combos]
+description = "E2E test all 4 frontend/backend combinations"
+depends = ["test-svelte-rust", "test-svelte-node", "test-react-rust", "test-react-node"]
 
 # =============================================================================
 # Unit Tests (run outside compose, watch mode)
@@ -105,25 +126,17 @@ depends = ["health-rust", "health-node", "health-svelte"]
 [tasks.stats]
 description = "Show container resource usage"
 run = """
-echo "=== Image Sizes ===" && podman image ls --format "table {{.Repository}}\\t{{.Size}}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && podman stats --no-stream --format "table {{.Name}}\\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
+echo "=== Image Sizes ===" && podman image ls --format "table {% raw %}{{.Repository}}\t{{.Size}}{% endraw %}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && podman stats --no-stream --format "table {% raw %}{{.Name}}\t{{.MemUsage}}{% endraw %}" 2>/dev/null || echo "No running containers"
 """
 
 # =============================================================================
-# Standalone Prod Containers (Quick Testing)
+# Production Compose Stack
 # =============================================================================
 
-[tasks.prod-rust]
-description = "Build and run standalone Rust prod container (port 8080)"
-run = "podman stop -i backend-rust-prod; podman rm -i backend-rust-prod; podman build -f admin-cms-app/backend-rust/Dockerfile.prod -t backend-rust-prod admin-cms-app/backend-rust && podman run -d -p 8080:8080 --name backend-rust-prod localhost/backend-rust-prod:latest"
+[tasks.prod-up]
+description = "Start production stack (all services)"
+run = "podman compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react up --build"
 
-[tasks.prod-node]
-description = "Build and run standalone Node prod container (port 8081)"
-run = "podman stop -i backend-node-prod; podman rm -i backend-node-prod; podman build -f admin-cms-app/backend-node/Dockerfile.prod -t backend-node-prod admin-cms-app/backend-node && podman run -d -p 8081:8080 --name backend-node-prod localhost/backend-node-prod:latest"
-
-[tasks.prod-both]
-description = "Build and run both prod containers"
-depends = ["prod-rust", "prod-node"]
-
-[tasks.prod-stop]
-description = "Stop standalone prod containers"
-run = "podman stop -i backend-rust-prod backend-node-prod 2>/dev/null; echo 'Stopped prod containers'"
+[tasks.prod-down]
+description = "Stop production stack"
+run = "podman compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react down"
