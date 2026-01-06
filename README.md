@@ -31,15 +31,6 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 - Content stored as Markdown files (no database)
 - Deploy to GitHub Pages / Cloudflare Pages
 
-## Stack Variants
-
-| Frontend  | Backend      | Command                 |
-|-----------|--------------|-------------------------|
-| SvelteKit | Rust/Axum    | `./run.sh svelte rust`  |
-| SvelteKit | Node/Fastify | `./run.sh svelte node`  |
-| React     | Rust/Axum    | `./run.sh react rust`   |
-| React     | Node/Fastify | `./run.sh react node`   |
-
 ## Documentation
 
 - [Architecture](./ARCHITECTURE.md) — System design, decisions, API format, findings, benchmarks, comparisons
