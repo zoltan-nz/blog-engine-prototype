@@ -22,20 +22,19 @@ podman compose --profile rust --profile svelte
 # Preview:   http://localhost:4321
 ```
 
-## What Is This?
+## Features
 
 An **Admin App** (frontend + backend) that controls an **Astro static site generator**.
 
-- Non-techy users get a UI to manage content
-- Techy users can still edit Astro directly
+- Users can use a UI to create static sites and manage content.
+- It is also possible to manage content directly editing the Markdown files as normally we do in Astro projects.
 - Content stored as Markdown files (no database)
 - Deploy to GitHub Pages / Cloudflare Pages
 
 ## Documentation
 
 - [Architecture](./ARCHITECTURE.md) — System design, decisions, API format, findings, benchmarks, comparisons
-- [Project Plan](./CLAUDE.md) — Current phase, TODOs, progress
-- [Agent Guidelines](./AGENTS.md) — AI assistant instructions and coding standards
+- [Notes](NOTES.md) — Current phase, TODOs, progress
 
 ## Development
 

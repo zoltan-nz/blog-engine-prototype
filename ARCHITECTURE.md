@@ -284,3 +284,13 @@ podman stats --no-stream
 - **Memory usage**: Rust uses ~35x less RAM (0.75 MB vs 26.5 MB)
 - **Note**: Node image includes Alpine + Node.js runtime + V8 engine; Rust compiles to a single static binary on Debian slim
 
+# Coding style
+
+- Test-driven development, with 100% coverage.
+- Break everything down into small steps and implement test-first.
+- For unit tests, use the language and framework's own unit testing solution.
+- We implement integration tests using Playwright.
+- Declarative and functional programming style is preferred.
+
+- No `get_` prefix: `fn name(&self)` not `fn get_name(&self)`
+- Mutable getter: `fn name_mut(&mut self)`
