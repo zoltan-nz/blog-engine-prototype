@@ -1,31 +1,34 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import type { HealthResponse } from './types.js';
-import { randomUUID } from 'node:crypto';
+import { buildFastifyApp, type FastifyOptions } from './app.js';
 
-const fastify = Fastify({ logger: true });
-await fastify.register(cors);
-
-fastify.get('/healthz', async (): Promise<HealthResponse> => {
-  return {
-    data: {
-      status: 'healthy',
-      version: '0.1.0',
-    },
-    meta: {
-      timestamp: new Date().toISOString(),
-      requestId: randomUUID(),
-    },
-  };
-});
+const DEFAULT_HOST = '0.0.0.0';
+const DEFAULT_PORT = '8081';
 
 const start = async () => {
+  const opts: FastifyOptions = {
+    logger: {
+      level: 'info',
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
+        },
+      },
+    },
+  };
+
+  const app = await buildFastifyApp(opts);
+
+  const port: number = parseInt(process.env.VITE_PORT || process.env.PORT || DEFAULT_PORT, 10);
+
   try {
-    await fastify.listen({ port: 8080, host: '0.0.0.0' });
+    await app.listen({ port, host: DEFAULT_HOST });
   } catch (err) {
-    fastify.log.error(err);
+    app.log.error(err);
     process.exit(1);
   }
 };
 
 await start();
+
+export { start };

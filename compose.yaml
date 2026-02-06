@@ -49,7 +49,11 @@ services:
     ports:
       - '8081:8080'
     volumes:
-      - ./admin-cms-app/backend-node/src:/app/src:ro
+      - ./admin-cms-app/backend-node/:/app/:ro
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8081/healthz']
       interval: 10s
@@ -88,8 +92,12 @@ services:
     environment:
       # Let's use the Node.js server as backend for React.
       - VITE_API_BACKEND_URL=http://localhost:8081
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
     volumes:
-      - ./admin-cms-app/frontend-react/src:/app/src:ro
+      - ./admin-cms-app/frontend-react/:/app/:ro
+      - /app/node_modules
+      - /app/.react-router
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001']
       interval: 10s

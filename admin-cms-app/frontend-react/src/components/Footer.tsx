@@ -7,11 +7,19 @@ export default function Footer() {
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [version, setVersion] = useState(null);
+  const [serverName, setServerName] = useState("");
+
   const checkConnection = async () => {
     setLoading(true);
     try {
       const response = await fetch(`${backendUrl}/healthz`);
       setConnected(response.ok);
+
+      const data = await response.json();
+      setVersion(data.meta.version);
+      setServerName(data.meta.serverName);
+
     } catch (error) {
       console.error("Failed to connect to backend:", error);
       setConnected(false);
@@ -21,13 +29,15 @@ export default function Footer() {
   };
 
   useEffect(() => {
-    checkConnection();
+    (async () => await checkConnection())();
   }, []);
 
   return (
     <footer className="border-t border-base-300 bg-base-100 px-8 py-4" data-testid="footer">
       <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-base-content">
-        <span className="text-base-content/60">Backend: {backendUrl}</span>
+        <span className="text-base-content/50">Backend: {backendUrl}</span>
+        <span className="text-base-content/50">Server Name: {serverName}</span>
+        <span className="text-base-content/50">Version: {version}</span>
         <button
           className="flex items-center gap-2 transition-opacity hover:opacity-80"
           onClick={checkConnection}

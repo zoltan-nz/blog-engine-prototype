@@ -1,6 +1,8 @@
 export interface Meta {
   timestamp: string;
   requestId: string;
+  serverName: string;
+  version: string;
 }
 
 export interface Envelope<T> {
@@ -13,7 +15,6 @@ export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
 export interface HealthData {
   status: HealthStatus;
-  version?: string;
 }
 
 export type HealthResponse = Envelope<HealthData>;

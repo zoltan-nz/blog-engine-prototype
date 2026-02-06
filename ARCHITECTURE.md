@@ -20,7 +20,7 @@ flowchart TB
             RUST["Rust + Axum"]
         end
 
-        FE <-->|OpenAPI 3.1| BE
+        FE <-->|OpenAPI 3 . 1| BE
     end
 
     subgraph ASTRO["Astro Server (Controlled)"]
@@ -30,10 +30,8 @@ flowchart TB
 
     BE <-->|Shared Volume| CONTENT
     CONTENT --> DEV
-
     DEV -->|Build| STATIC["Static Output"]
     STATIC -->|Deploy| PROD["GitHub Pages\nCloudflare Pages"]
-
     BROWSER["👤 Admin User"] --> FE
     VISITORS["👥 Public"] --> PROD
 ```
@@ -53,7 +51,7 @@ flowchart TB
 | Decision       | Choice                           | Rationale                                         |
 |----------------|----------------------------------|---------------------------------------------------|
 | Specification  | OpenAPI 3.1                      | Industry standard, JSON Schema 2020-12 compatible |
-| Error format   | RFC 7807 Problem Details         | Standard, well-supported                          |
+| Error format   | RFC 9457 Problem Details         | Standard, well-supported                          |
 | Payload format | Simple envelope `{ data, meta }` | Room for metadata, simple serialization           |
 | Relations      | Embedded                         | Simple CMS, no complex entity graphs              |
 
@@ -155,7 +153,7 @@ podman-compose -f compose.yaml \
 }
 ```
 
-### Error Response (RFC 7807)
+### Error Response (RFC 9457)
 
 ```json
 {
@@ -180,7 +178,7 @@ podman-compose -f compose.yaml \
 ├── open-api-contracts/
 │   └── api.yaml                 # OpenAPI 3.1 specification
 │
-├── admin-app/
+├── admin-cms-app/
 │   ├── frontend-svelte/         # SvelteKit + DaisyUI
 │   ├── frontend-react/          # React + DaisyUI
 │   ├── backend-node/            # Fastify + TypeScript
@@ -191,17 +189,17 @@ podman-compose -f compose.yaml \
 ├── integration-tests/           # Playwright tests
 │
 ├── compose.yaml                 # Base compose
-├── compose.frontend-*.yaml      # Frontend overrides
-├── compose.backend-*.yaml       # Backend overrides
+├── compose.prod.yaml            # Frontend overrides
 │
 ├── ARCHITECTURE.md              # This file
-├── CLAUDE.md                    # Project plan & progress
+├── NOTES.md                     # Current phase, TODOs, progress
 └── README.md                    # Project overview
 ```
 
 ## Developer Experience Architecture
 
-The development workflow separates concerns: **Compose** runs services with hot reload, while **tests run on the host** for fast TDD feedback.
+The development workflow separates concerns: **Compose** runs services with hot reload, while **tests run on the host**
+for fast TDD feedback.
 
 ```
 HOST (Outside Compose)
@@ -241,13 +239,13 @@ COMPOSE (dev watch mode)
 
 ### Port Scheme
 
-| Service | Port | Notes |
-|---------|------|-------|
-| Rust backend | 8080 | Sweet spot backend |
-| Node backend | 8081 | Alternative backend |
-| SvelteKit frontend | 3000 | Sweet spot frontend |
-| React frontend | 3001 | Alternative frontend |
-| Astro server | 4321 | Static site preview |
+| Service            | Port | Notes                |
+|--------------------|------|----------------------|
+| Rust backend       | 8080 | Sweet spot backend   |
+| Node backend       | 8081 | Alternative backend  |
+| SvelteKit frontend | 3000 | Sweet spot frontend  |
+| React frontend     | 3001 | Alternative frontend |
+| Astro server       | 4321 | Static site preview  |
 
 ### TDD Workflow (Multiple Terminals)
 
@@ -282,7 +280,8 @@ podman stats --no-stream
 
 - **Image size**: Rust is ~2x smaller (122 MB vs 255 MB)
 - **Memory usage**: Rust uses ~35x less RAM (0.75 MB vs 26.5 MB)
-- **Note**: Node image includes Alpine + Node.js runtime + V8 engine; Rust compiles to a single static binary on Debian slim
+- **Note**: Node image includes Alpine + Node.js runtime + V8 engine; Rust compiles to a single static binary on Debian
+  slim
 
 # Coding style
 

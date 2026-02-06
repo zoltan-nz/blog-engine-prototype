@@ -1,4 +1,5 @@
 [tools]
+# Hey is a performance management software
 hey = "latest"
 node = "latest"
 pnpm = "latest"
@@ -98,26 +99,6 @@ echo "=== Running all unit tests ===" && \
 (cd admin-cms-app/frontend-react && pnpm exec vitest run) && \
 echo "=== All unit tests passed ==="
 """
-
-# =============================================================================
-# Health Check Tasks
-# =============================================================================
-
-[tasks.health-rust]
-description = "Check Rust backend health (port 8080)"
-run = "curl -s http://127.0.0.1:8080/healthz | jq ."
-
-[tasks.health-node]
-description = "Check Node backend health (port 8081)"
-run = "curl -s http://127.0.0.1:8081/healthz | jq ."
-
-[tasks.health-svelte]
-description = "Check SvelteKit frontend (port 3000)"
-run = "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000 && echo ' OK'"
-
-[tasks.health]
-description = "Check all health endpoints"
-depends = ["health-rust", "health-node", "health-svelte"]
 
 # =============================================================================
 # Container Stats
