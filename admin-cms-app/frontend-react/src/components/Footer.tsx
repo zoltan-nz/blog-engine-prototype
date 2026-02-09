@@ -19,7 +19,6 @@ export default function Footer() {
       const data = await response.json();
       setVersion(data.meta.version);
       setServerName(data.meta.serverName);
-
     } catch (error) {
       console.error("Failed to connect to backend:", error);
       setConnected(false);
@@ -33,7 +32,10 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="border-t border-base-300 bg-base-100 px-8 py-4" data-testid="footer">
+    <footer
+      className="border-t border-base-300 bg-base-100 px-8 py-4"
+      data-testid="footer"
+    >
       <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-base-content">
         <span className="text-base-content/50">Backend: {backendUrl}</span>
         <span className="text-base-content/50">Server Name: {serverName}</span>

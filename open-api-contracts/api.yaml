@@ -48,7 +48,7 @@ components:
           type: string
         serverName:
           type: string
-          enum: [ backend-node, backend-rust ]
+          enum: [backend-node, backend-rust]
 
     # Health endpoint response
     HealthData:
