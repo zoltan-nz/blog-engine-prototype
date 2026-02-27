@@ -192,7 +192,6 @@ podman-compose -f compose.yaml \
 ├── compose.prod.yaml            # Frontend overrides
 │
 ├── ARCHITECTURE.md              # This file
-├── NOTES.md                     # Current phase, TODOs, progress
 └── README.md                    # Project overview
 ```
 
@@ -283,7 +282,7 @@ podman stats --no-stream
 - **Note**: Node image includes Alpine + Node.js runtime + V8 engine; Rust compiles to a single static binary on Debian
   slim
 
-# Coding style
+## Coding style
 
 - Test-driven development, with 100% coverage.
 - Break everything down into small steps and implement test-first.
@@ -293,3 +292,38 @@ podman stats --no-stream
 
 - No `get_` prefix: `fn name(&self)` not `fn get_name(&self)`
 - Mutable getter: `fn name_mut(&mut self)`
+
+## Code-First API Approach
+
+- Write the API in Rust Axum first.
+- Use `utoipa-axum` to generate Swagger Open API yaml specification.
+- Use `utoipa-swagger-ui` to publish the API doc.
+- Export the generated specification to `open-api-contracts/api.yaml` to keep the frontend types in sync.
+- Use `orval` in frontend projects to generate the compatible `react-query` and `svelte-query`.
+
+## Quadlet Production Deployment
+
+**Summary:** Migrate from `podman compose` (dev-oriented) to Quadlet (production-native) for deployment:
+
+- Quadlet = systemd generator that converts `.container` files → systemd services
+- Native boot startup, auto-restart, journald logging, auto-updates
+- Images pushed to ghcr.io, pulled on production server
+- Files stored in `quadlet/` folder (tracked in git, symlinked to `~/.config/containers/systemd/`)
+
+**Key benefits over compose:**
+
+| Feature             | Compose          | Quadlet                          |
+|---------------------|------------------|----------------------------------|
+| Boot startup        | Extra config     | Native `WantedBy=default.target` |
+| Auto-updates        | Needs watchtower | Built-in `AutoUpdate=registry`   |
+| Process supervision | Limited          | Full systemd                     |
+| Logs                | `podman logs`    | `journalctl`                     |
+
+**Files to create when implementing:**
+
+- `scripts/build-push-images.sh` — Build & push to ghcr.io
+- `quadlet/*.container` — One per service (5 total)
+- `quadlet/blog.network` — Shared network
+- `quadlet/astro-sites.volume` — Shared volume
+- `quadlet/README.md` — Deployment instructions
+- mise tasks for `build-push`, `quadlet-up`, `quadlet-down`, etc.

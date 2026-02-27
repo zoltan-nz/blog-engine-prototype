@@ -1,28 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { env } from "$env/dynamic/public";
+  import {createGetHealthz} from "../../generated-api.js";
+  import {backendURL} from "$lib/api/fetch-with-base-url.js";
 
-  let connected = $state(false);
-  let loading = $state(true);
+  const checkConnection = createGetHealthz();
 
-  const backendUrl = env.PUBLIC_API_BACKEND_URL || "http://localhost:8080";
-
-  async function checkConnection() {
-    loading = true;
-    try {
-      const res = await fetch(`${backendUrl}/healthz`);
-      const data = await res.json();
-      connected = res.ok && data.data?.status === "healthy";
-    } catch {
-      connected = false;
-    } finally {
-      loading = false;
-    }
-  }
-
-  onMount(() => {
-    checkConnection();
-  });
 </script>
 
 <footer
@@ -30,22 +11,24 @@
   data-testid="footer"
 >
   <div class="mx-auto flex max-w-4xl items-center justify-between text-sm">
-    <span class="text-base-content/60">Backend: {backendUrl}</span>
+    <span class="text-base-content/60">Backend: {backendURL}</span>
+    <span class="text-base-content/60">Server Name: {checkConnection.data?.data.meta.serverName}</span>
+    <span class="text-base-content/60">Version: {checkConnection.data?.data.meta.version}</span>
     <button
       class="flex items-center gap-2 transition-opacity hover:opacity-80"
-      onclick={checkConnection}
-      disabled={loading}
-      title={connected ? "Connected" : "Disconnected"}
+      onclick={(() => checkConnection.refetch())}
+      disabled={checkConnection.isLoading}
+      title={checkConnection.isSuccess ? "Connected" : "Disconnected"}
     >
-      {#if loading}
+      {#if checkConnection.isLoading}
         <span class="loading loading-xs loading-spinner"></span>
       {:else}
         <span
-          class="h-3 w-3 rounded-full {connected ? 'bg-success' : 'bg-error'}"
+          class="h-3 w-3 rounded-full {checkConnection.isSuccess ? 'bg-success' : 'bg-error'}"
         ></span>
       {/if}
       <span class="text-base-content/60">
-        {loading ? "Checking..." : connected ? "Connected" : "Disconnected"}
+        {checkConnection.isLoading ? "Checking..." : checkConnection.isSuccess ? "Connected" : "Disconnected"}
       </span>
     </button>
   </div>

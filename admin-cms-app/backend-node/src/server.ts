@@ -5,16 +5,7 @@ const DEFAULT_PORT = '8081';
 
 const start = async () => {
   const opts: FastifyOptions = {
-    logger: {
-      level: 'info',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
-        },
-      },
-    },
+    logger: true,
   };
 
   const app = await buildFastifyApp(opts);

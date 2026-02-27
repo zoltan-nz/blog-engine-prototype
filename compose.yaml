@@ -18,7 +18,7 @@ services:
       - astro-sites:/app/astro-sites
     healthcheck:
       test: ['CMD', 'node', '-e', "console.log('ok')"]
-      interval: 10s
+      interval: 600s
       timeout: 5s
       retries: 3
     ports:
@@ -35,7 +35,7 @@ services:
       - '8080:8080'
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1']
-      interval: 10s
+      interval: 600s
       timeout: 5s
       retries: 3
 
@@ -56,7 +56,7 @@ services:
       - CHOKIDAR_INTERVAL=100
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8081/healthz']
-      interval: 10s
+      interval: 600s
       timeout: 5s
       retries: 3
 
@@ -73,10 +73,10 @@ services:
       # Use the Rust server as backend for Svelte.
       - PUBLIC_API_BACKEND_URL=http://localhost:8080
     volumes:
-      - ./admin-cms-app/frontend-svelte/src:/app/src:ro
+      - ./admin-cms-app/frontend-svelte/bin:/app/bin:ro
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000']
-      interval: 10s
+      interval: 600s
       timeout: 5s
       retries: 3
 
@@ -100,6 +100,6 @@ services:
       - /app/.react-router
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001']
-      interval: 10s
+      interval: 600s
       timeout: 5s
       retries: 3

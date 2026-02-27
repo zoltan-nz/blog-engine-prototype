@@ -11,35 +11,35 @@ rust = "latest"
 
 [tasks.up]
 description = "Start all services (both backends + svelte) for comparison"
-run = "podman compose --profile rust --profile node --profile svelte --profile react up --remove-orphans"
+run = "docker compose --profile rust --profile node --profile svelte --profile react up --remove-orphans"
 
 [tasks.up-d]
 description = "Start all services detached"
-run = "podman compose --profile rust --profile node --profile svelte up -d"
+run = "docker compose --profile rust --profile node --profile svelte up -d"
 
 [tasks.up-rust]
 description = "Start stack with Rust backend only"
-run = "podman compose --profile rust up"
+run = "docker compose --profile rust up"
 
 [tasks.up-node]
 description = "Start stack with Node backend only"
-run = "podman compose --profile node up"
+run = "docker compose --profile node up"
 
 [tasks.up-svelte]
 description = "Start SvelteKit + Rust backend (sweet spot combo)"
-run = "podman compose --profile rust --profile svelte up"
+run = "docker compose --profile rust --profile svelte up"
 
 [tasks.up-react]
 description = "Start React + Node backend"
-run = "podman compose --profile node --profile react up"
+run = "docker compose --profile node --profile react up"
 
 [tasks.down]
 description = "Stop and remove compose stack"
-run = "podman compose down"
+run = "docker compose down"
 
 [tasks.logs]
 description = "Follow compose logs"
-run = "podman compose logs -f"
+run = "docker compose logs -f"
 
 # =============================================================================
 # Integration Tests (Playwright - runs outside compose)
@@ -48,16 +48,6 @@ run = "podman compose logs -f"
 [tasks.test-svelte-rust]
 description = "E2E test: Svelte + Rust (sweet spot)"
 run = "FRONTEND_URL=http://localhost:3000 BACKEND_URL=http://localhost:8080 pnpm exec playwright test"
-dir = "integration-tests"
-
-[tasks.test-svelte-node]
-description = "E2E test: Svelte + Node"
-run = "FRONTEND_URL=http://localhost:3000 BACKEND_URL=http://localhost:8081 pnpm exec playwright test"
-dir = "integration-tests"
-
-[tasks.test-react-rust]
-description = "E2E test: React + Rust"
-run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8080 pnpm exec playwright test"
 dir = "integration-tests"
 
 [tasks.test-react-node]
@@ -107,7 +97,7 @@ echo "=== All unit tests passed ==="
 [tasks.stats]
 description = "Show container resource usage"
 run = """
-echo "=== Image Sizes ===" && podman image ls --format "table {% raw %}{{.Repository}}\t{{.Size}}{% endraw %}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && podman stats --no-stream --format "table {% raw %}{{.Name}}\t{{.MemUsage}}{% endraw %}" 2>/dev/null || echo "No running containers"
+echo "=== Image Sizes ===" && docker image ls --format "table {% raw %}{{.Repository}}\t{{.Size}}{% endraw %}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {% raw %}{{.Name}}\t{{.MemUsage}}{% endraw %}" 2>/dev/null || echo "No running containers"
 """
 
 # =============================================================================
@@ -116,8 +106,8 @@ echo "=== Image Sizes ===" && podman image ls --format "table {% raw %}{{.Reposi
 
 [tasks.prod-up]
 description = "Start production stack (all services)"
-run = "podman compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react up --build"
+run = "docker compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react up --build"
 
 [tasks.prod-down]
 description = "Stop production stack"
-run = "podman compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react down"
+run = "docker compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react down"

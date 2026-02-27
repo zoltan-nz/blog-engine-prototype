@@ -1,13 +1,16 @@
 import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-svelte";
+import { render } from "@testing-library/svelte";
 import Footer from "./footer.svelte";
+import { QueryClient } from "@tanstack/svelte-query";
 
 vi.mock("$env/dynamic/public", () => ({
   env: {
     PUBLIC_API_BACKEND_URL: "http://test-backend.test:8080",
   },
 }));
+
+const queryClient = new QueryClient();
 
 describe("Footer", () => {
   beforeEach(() => {

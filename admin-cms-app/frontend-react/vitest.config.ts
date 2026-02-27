@@ -14,7 +14,7 @@ export default defineConfig({
       provider: playwright(),
       instances: [{ browser: "chromium", headless: true }],
     },
-    include: ["src/**/*.{test,spec}.{js,ts,tsx}"],
-    setupFiles: ["./src/test-setup.ts"],
+    include: ["bin/**/*.{test,spec}.{js,ts,tsx}"],
+    setupFiles: ["./bin/test-setup.ts"],
   },
 });
