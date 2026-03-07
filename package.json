@@ -2,7 +2,8 @@
   "devDependencies": {
     "prettier": "^3.8.1",
     "prettier-plugin-svelte": "^3.5.0",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "shadcn": "^4.0.0"
   },
   "scripts": {
     "format": "prettier --write --cache -u -l .",

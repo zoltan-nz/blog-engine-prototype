@@ -1,100 +1,66 @@
 openapi: 3.1.0
 info:
   title: Blog Engine API
-  version: 0.1.0
   description: API for managing Astro blog sites
-
-servers:
-  - url: http://localhost:8080
-    description: Local development
-
+  license:
+    name: ''
+  version: 0.1.0
 paths:
   /healthz:
     get:
-      summary: Health check (K8s compatible)
-      operationId: getHealthz
+      tags: []
+      operationId: healthz
       responses:
         '200':
           description: Service is healthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
-
+                $ref: '#/components/schemas/Envelop'
 components:
   schemas:
-    # Standard envelope wrapper
-    Envelope:
+    Envelop:
       type: object
       required:
         - data
         - meta
       properties:
         data:
-          description: Response payload
+          $ref: '#/components/schemas/HealthData'
         meta:
           $ref: '#/components/schemas/Meta'
-
-    Meta:
-      type: object
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-        requestId:
-          type: string
-          format: uuid
-        version:
-          type: string
-        serverName:
-          type: string
-          enum: [backend-node, backend-rust]
-
-    # Health endpoint response
     HealthData:
       type: object
       required:
         - status
+        - version
       properties:
         status:
+          $ref: '#/components/schemas/HealthStatus'
+        version:
           type: string
-          enum: [healthy, degraded, unhealthy]
-
-    HealthResponse:
-      allOf:
-        - $ref: '#/components/schemas/Envelope'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/HealthData'
-
-    # RFC 7807 Problem Details
-    ProblemDetails:
+    HealthStatus:
+      type: string
+      enum:
+        - healthy
+    Meta:
       type: object
       required:
-        - type
-        - title
-        - status
+        - timestamp
+        - requestId
+        - version
+        - serverName
       properties:
-        type:
+        requestId:
           type: string
-          format: uri
-          description: URI reference identifying the problem type
-          example: https://api.example.com/problems/not-found
-        title:
+        serverName:
+          $ref: '#/components/schemas/MetaServerName'
+        timestamp:
           type: string
-          description: Short human-readable summary
-          example: Resource Not Found
-        status:
-          type: integer
-          description: HTTP status code
-          example: 404
-        detail:
+        version:
           type: string
-          description: Human-readable explanation specific to this occurrence
-          example: The requested blog site 'my-blog' was not found
-        instance:
-          type: string
-          format: uri
-          description: URI reference identifying the specific occurrence
-          example: /api/sites/my-blog
+    MetaServerName:
+      type: string
+      enum:
+        - backend-node
+        - backend-rust

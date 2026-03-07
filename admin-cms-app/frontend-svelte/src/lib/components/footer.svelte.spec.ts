@@ -1,6 +1,6 @@
 import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/svelte";
+import { render } from "vitest-browser-svelte";
 import Footer from "./footer.svelte";
 import { QueryClient } from "@tanstack/svelte-query";
 

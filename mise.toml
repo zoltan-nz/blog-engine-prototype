@@ -111,3 +111,22 @@ run = "docker compose -f compose.prod.yaml --profile rust --profile node --profi
 [tasks.prod-down]
 description = "Stop production stack"
 run = "docker compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react down"
+
+# =============================================================================
+# Local Dev Tasks
+# =============================================================================
+
+[tasks.dev-rust]
+description = "Start Rust backend locally (hot reload)"
+run = "cargo watch -x 'run --bin backend-rust'"
+dir = "admin-cms-app/backend-rust"
+
+[tasks.dev-gen-open-api]
+description= "Generate OpenAPI yaml from Rust backend"
+run = "cargo run --bin gen_open_api_yaml"
+dir = "admin-cms-app/backend-rust"
+
+[tasks.dev-update-api-svelte]
+description = "Generate types and query from OpenAPI specification in the Svelte frontend"
+run = "pnpm run generate"
+dir = "admin-cms-app/frontend-svelte"

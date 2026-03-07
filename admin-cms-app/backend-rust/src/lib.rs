@@ -85,7 +85,8 @@ pub async fn healthz() -> impl IntoResponse {
 
 #[derive(OpenApi)]
 #[openapi(
-    info(title = "Blog Engine API", version = env!("CARGO_PKG_VERSION")),
+    info(title = "Blog Engine API", version = env!("CARGO_PKG_VERSION"), description = "API for managing Astro blog sites"),
+    paths(healthz),
     components(schemas(HealthResponse, HealthData, HealthStatus, Meta, MetaServerName))
 )]
 pub struct ApiDoc;

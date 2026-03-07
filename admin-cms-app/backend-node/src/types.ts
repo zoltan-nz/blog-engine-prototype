@@ -5,19 +5,19 @@ export interface Meta {
   version: string;
 }
 
-export interface Envelope<T> {
+export interface Envelop<T> {
   data: T;
   meta: Meta;
 }
 
 // Health endpoint
-export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+export type HealthStatus = 'healthy';
 
 export interface HealthData {
   status: HealthStatus;
 }
 
-export type HealthResponse = Envelope<HealthData>;
+export type HealthResponse = Envelop<HealthData>;
 
 // RFC 7807 Problem Details
 export interface ProblemDetails {

@@ -3,11 +3,11 @@ import { defineConfig } from "orval";
 export default defineConfig({
   api: {
     output: {
-      target: "./bin/generated-api.ts",
+      target: "./src/generated-api.ts",
       client: "svelte-query",
       override: {
         mutator: {
-          path: "./bin/lib/api/fetch-with-base-url.ts",
+          path: "./src/lib/api/fetch-with-base-url.ts",
           name: "fetchWithServerUrl",
           extension: ".js",
         },

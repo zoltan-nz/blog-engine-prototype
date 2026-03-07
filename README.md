@@ -41,8 +41,8 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 # Run integration tests
 cd tests/integration && pnpm exec playwright test
 
-# Generate types from OpenAPI contract
-npm run generate:types
+# Generate OpenAPI yaml specification from the Rust backend code
+mise dev-gen-open-api
 ```
 
 ## Tech Stack

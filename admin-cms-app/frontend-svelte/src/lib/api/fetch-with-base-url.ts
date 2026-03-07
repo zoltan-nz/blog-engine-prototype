@@ -8,10 +8,7 @@ export const fetchWithServerUrl = async <T>(
 ): Promise<T> => {
   const requestUrl = `${backendURL}${url}`;
 
-  console.log(`fetchWithServerUrl was called with url: ${backendURL}${url}`);
-
-  const request = new Request(requestUrl, options);
-  const response = await fetch(request);
+  const response = await fetch(requestUrl, options);
   const data = await response.json();
 
   return { status: response.status, data } as T;

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { createGetHealthz } from "../../generated-api.js";
+  import { createHealthz } from "../../generated-api.js";
   import { backendURL } from "$lib/api/fetch-with-base-url.js";
 
-  const checkConnection = createGetHealthz();
+  const checkConnection = createHealthz();
 </script>
 
 <footer
