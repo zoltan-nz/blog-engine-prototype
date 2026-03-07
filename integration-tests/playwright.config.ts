@@ -25,12 +25,33 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
+
+  /* Start local dev servers before tests. reuseExistingServer reuses a
+     running instance in local dev so you don't wait for Rust to recompile
+     on every run; CI always starts fresh. */
+  webServer: [
+    {
+      command: 'cargo run',
+      cwd: '../admin-cms-app/backend-rust',
+      url: 'http://localhost:8080/healthz',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000, // Rust compile can be slow on first run
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'pnpm dev',
+      cwd: '../admin-cms-app/frontend-svelte',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
 
   /* Configure projects for major browsers */
   projects: [
@@ -69,11 +90,4 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

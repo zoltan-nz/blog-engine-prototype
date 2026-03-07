@@ -46,8 +46,8 @@ run = "docker compose logs -f"
 # =============================================================================
 
 [tasks.test-svelte-rust]
-description = "E2E test: Svelte + Rust (sweet spot)"
-run = "FRONTEND_URL=http://localhost:3000 BACKEND_URL=http://localhost:8080 pnpm exec playwright test"
+description = "E2E test: Svelte + Rust (sweet spot) — servers start automatically"
+run = "pnpm exec playwright test"
 dir = "integration-tests"
 
 [tasks.test-react-node]
