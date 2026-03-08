@@ -116,6 +116,10 @@ run = "docker compose -f compose.prod.yaml --profile rust --profile node --profi
 # Local Dev Tasks
 # =============================================================================
 
+[tasks.format]
+description = "Format code in all services"
+run = "pnpm format && cd admin-cms-app/backend-rust && cargo fmt"
+
 [tasks.dev-rust]
 description = "Start Rust backend locally (hot reload)"
 run = "cargo watch -x 'run --bin backend-rust'"
@@ -125,8 +129,12 @@ dir = "admin-cms-app/backend-rust"
 description= "Generate OpenAPI yaml from Rust backend"
 run = "cargo run --bin gen_open_api_yaml"
 dir = "admin-cms-app/backend-rust"
+depends_post = ["format"]
 
-[tasks.dev-update-api-svelte]
-description = "Generate types and query from OpenAPI specification in the Svelte frontend"
-run = "pnpm run generate"
-dir = "admin-cms-app/frontend-svelte"
+[tasks.dev-gen-frontend-api]
+description = "Generate types and query from OpenAPI specification in the Svelte and React frontend"
+depends = ["dev-gen-open-api"]
+run = [
+    "pnpm --filter frontend-svelte run generate",
+    "pnpm --filter frontend-react run generate"
+]

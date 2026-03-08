@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   isRouteErrorResponse,
   Links,
@@ -11,6 +12,8 @@ import type { Route } from "./+types/root";
 import Footer from "./components/Footer";
 import "./app.css";
 
+const queryClient = new QueryClient();
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -21,10 +24,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
       </head>
       <body>
-        <div className="flex min-h-screen flex-col">
-          <main className="container mx-auto flex-grow p-4">{children}</main>
-          <Footer />
-        </div>
+        <QueryClientProvider client={queryClient}>
+          <div className="flex min-h-screen flex-col">
+            <main className="container mx-auto flex-grow p-4">{children}</main>
+            <Footer />
+          </div>
+        </QueryClientProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

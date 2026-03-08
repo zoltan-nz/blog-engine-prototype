@@ -1,10 +1,10 @@
-use backend_rust::{ApiDoc};
+use backend_rust::ApiDoc;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use utoipa::{OpenApi};
+use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use utoipa_swagger_ui::SwaggerUi;
