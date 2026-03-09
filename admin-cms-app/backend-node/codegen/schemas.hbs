@@ -1,11 +1,9 @@
-// ⚠️ Auto-generated from open-api-contracts/api.yaml — do not edit manually // Run: pnpm gen:schemas import { z } from
-'zod';
+// ⚠️ Auto-generated from open-api-contracts/api.yaml — do not edit manually
+// Run: pnpm gen:schemas
+import { z } from 'zod';
 
 {{#each schemas}}
-  export const
-  {{@key}}
-  =
-  {{{this}}};
+export const {{@key}} = {{{this}}};
 {{/each}}
 
 export const schemas = {
