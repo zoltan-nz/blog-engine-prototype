@@ -1,45 +1,32 @@
 import Fastify, { type FastifyBaseLogger, type FastifyHttpOptions } from 'fastify';
 import * as https from 'node:https';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import cors from '@fastify/cors';
-import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
-import { randomUUID } from 'node:crypto';
-import packageJson from '../package.json' with { type: 'json' };
-import { schemas } from './generated-schemas.js';
+import openapiGlue from 'fastify-openapi-glue';
+import { healthz } from './handlers/healthz.js';
 
 type FastifyOptions = FastifyHttpOptions<https.Server, FastifyBaseLogger>;
 
-const buildFastifyApp = async (opts?: FastifyOptions) => {
-  const app = Fastify(opts);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const specPath = join(__dirname, '../../../open-api-contracts/api.yaml');
 
-  app.setValidatorCompiler(validatorCompiler);
-  app.setSerializerCompiler(serializerCompiler);
+const serviceHandlers = { healthz };
+
+const buildFastifyApp = async (opts?: FastifyOptions) => {
+  const app = Fastify({
+    ...opts,
+    ajv: {
+      customOptions: { strict: false },
+    },
+  });
 
   await app.register(cors);
 
-  app.withTypeProvider<ZodTypeProvider>().get(
-    '/healthz',
-    {
-      schema: {
-        response: {
-          200: schemas.Envelop,
-        },
-      },
-    },
-    async () => {
-      return {
-        data: {
-          status: 'healthy' as const,
-          version: packageJson.version,
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          requestId: randomUUID(),
-          serverName: packageJson.name as 'backend-node',
-          version: packageJson.version,
-        },
-      };
-    },
-  );
+  await app.register(openapiGlue, {
+    specification: specPath,
+    serviceHandlers,
+  });
 
   return app;
 };

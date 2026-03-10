@@ -131,10 +131,11 @@ run = "cargo run --bin gen_open_api_yaml"
 dir = "admin-cms-app/backend-rust"
 depends_post = ["format"]
 
-[tasks.dev-gen-frontend-api]
+[tasks.dev-gen-api-clients]
 description = "Generate types and query from OpenAPI specification in the Svelte and React frontend"
 depends = ["dev-gen-open-api"]
 run = [
     "pnpm --filter frontend-svelte run generate",
-    "pnpm --filter frontend-react run generate"
+    "pnpm --filter frontend-react run generate",
+    "pnpm --filter backend-node run generate"
 ]
