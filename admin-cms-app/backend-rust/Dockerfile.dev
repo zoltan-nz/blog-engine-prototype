@@ -21,4 +21,4 @@ COPY src ./src
 EXPOSE 8080
 
 # Hot-reload in development
-CMD ["cargo", "watch", "-x", "run"]
+CMD cargo watch -x 'run --bin backend-rust'

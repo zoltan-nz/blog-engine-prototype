@@ -11,31 +11,39 @@ rust = "latest"
 
 [tasks.up]
 description = "Start all services (both backends + svelte) for comparison"
-run = "docker compose --profile rust --profile node --profile svelte --profile react up --remove-orphans"
+run = "docker compose --profile rust --profile node --profile svelte --profile react up --remove-orphans --build"
 
 [tasks.up-d]
 description = "Start all services detached"
-run = "docker compose --profile rust --profile node --profile svelte up -d"
+run = "docker compose --profile rust --profile node --profile svelte --profile react up --build --remove-orphans -d --wait"
 
 [tasks.up-rust]
 description = "Start stack with Rust backend only"
-run = "docker compose --profile rust up"
+run = "docker compose --profile rust up --remove-orphans --build"
 
 [tasks.up-node]
 description = "Start stack with Node backend only"
-run = "docker compose --profile node up"
+run = "docker compose --profile node up --remove-orphans --build --renew-anon-volumes"
 
-[tasks.up-svelte]
+[tasks.up-svelte-rust]
 description = "Start SvelteKit + Rust backend (sweet spot combo)"
-run = "docker compose --profile rust --profile svelte up"
+run = "docker compose --profile rust --profile svelte up --remove-orphans --build"
 
-[tasks.up-react]
+[tasks.up-svelte-rust-d]
+description = "Start SvelteKit + Rust backend detached"
+run = "docker compose --profile rust --profile svelte up --remove-orphans --build -d --wait"
+
+[tasks.up-react-node]
 description = "Start React + Node backend"
-run = "docker compose --profile node --profile react up"
+run = "docker compose --profile node --profile react up --remove-orphans --build"
+
+[tasks.up-react-node-d]
+description = "Start React + Node backend detached"
+run = "docker compose --profile node --profile react up --remove-orphans --build -d --wait"
 
 [tasks.down]
 description = "Stop and remove compose stack"
-run = "docker compose down"
+run = "docker compose --profile rust --profile node --profile svelte --profile react down --remove-orphans"
 
 [tasks.logs]
 description = "Follow compose logs"
@@ -47,17 +55,21 @@ run = "docker compose logs -f"
 
 [tasks.test-svelte-rust]
 description = "E2E test: Svelte + Rust (sweet spot) — servers start automatically"
-run = "pnpm exec playwright test"
 dir = "integration-tests"
+depends=["up-svelte-rust-d"]
+run = "pnpm run test"
+depends_post=["down"]
 
 [tasks.test-react-node]
 description = "E2E test: React + Node"
-run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8081 pnpm exec playwright test"
 dir = "integration-tests"
+depends=["up-react-node-d"]
+run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8081 pnpm run test"
+depends_post=["down"]
 
 [tasks.test-all-combos]
 description = "E2E test all 4 frontend/backend combinations"
-depends = ["test-svelte-rust", "test-svelte-node", "test-react-rust", "test-react-node"]
+depends = ["test-svelte-rust", "test-react-node"]
 
 # =============================================================================
 # Unit Tests (run outside compose, watch mode)

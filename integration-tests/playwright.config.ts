@@ -25,33 +25,33 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
 
   /* Start local dev servers before tests. reuseExistingServer reuses a
      running instance in local dev so you don't wait for Rust to recompile
      on every run; CI always starts fresh. */
-  webServer: [
-    {
-      command: 'cargo run',
-      cwd: '../admin-cms-app/backend-rust',
-      url: 'http://localhost:8080/healthz',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000, // Rust compile can be slow on first run
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-    {
-      command: 'pnpm dev',
-      cwd: '../admin-cms-app/frontend-svelte',
-      url: 'http://localhost:5173',
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-  ],
+  // webServer: [
+  //   {
+  //     command: 'cargo run',
+  //     cwd: '../admin-cms-app/backend-rust',
+  //     url: 'http://localhost:8080/healthz',
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 120_000, // Rust compile can be slow on first run
+  //     stdout: 'pipe',
+  //     stderr: 'pipe',
+  //   },
+  //   {
+  //     command: 'pnpm dev',
+  //     cwd: '../admin-cms-app/frontend-svelte',
+  //     url: 'http://localhost:5173',
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 30_000,
+  //     stdout: 'pipe',
+  //     stderr: 'pipe',
+  //   },
+  // ],
 
   /* Configure projects for major browsers */
   projects: [

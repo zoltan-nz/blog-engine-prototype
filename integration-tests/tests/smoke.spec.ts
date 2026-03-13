@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
 
 test.describe('Smoke Tests - All Services Respond', () => {
