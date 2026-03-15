@@ -63,14 +63,14 @@ flowchart TB
 | Backend           | Node/Fastify/TS, Rust/Axum | Swappable, share same API contract |
 | Static Site       | Astro                      | Templates, content collections     |
 | Database          | None (filesystem)          | Config files if metadata needed    |
-| Container Runtime | Podman + Compose           | Rootless, daemonless               |
+| Container Runtime | Docker + Compose           | Containerized services             |
 | Base Image        | Alpine Linux               | Minimal resource usage             |
 
 ### Deployment
 
 | Environment    | Setup                              |
 |----------------|------------------------------------|
-| Development    | Local Podman compose               |
+| Development    | Local Docker compose               |
 | Production     | Linode (1GB + 2GB swap) or similar |
 | Networking     | Tailscale for remote access        |
 | Static Hosting | GitHub Pages / Cloudflare Pages    |
@@ -79,7 +79,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph PODMAN["Podman Compose"]
+    subgraph DOCKER["Docker Compose"]
         FE["frontend\n:3000"]
         BE["backend\n:8000"]
         ASTRO["astro\n:4321"]
@@ -105,12 +105,12 @@ compose.backend-rust.yaml       # Rust/Axum override
 
 ```bash
 # SvelteKit + Rust (sweet spot)
-podman-compose -f compose.yaml \
+docker compose -f compose.yaml \
   -f compose.frontend-svelte.yaml \
   -f compose.backend-rust.yaml up
 
 # React + Node
-podman-compose -f compose.yaml \
+docker compose -f compose.yaml \
   -f compose.frontend-react.yaml \
   -f compose.backend-node.yaml up
 ```
@@ -264,8 +264,8 @@ Comparing production Docker images after implementing minimal `/healthz` endpoin
 ### Measurement Commands
 
 ```bash
-podman image ls
-podman stats --no-stream
+docker image ls
+docker stats --no-stream
 ```
 
 ### Results
@@ -303,7 +303,7 @@ podman stats --no-stream
 
 ## Quadlet Production Deployment
 
-**Summary:** Migrate from `podman compose` (dev-oriented) to Quadlet (production-native) for deployment:
+**Summary:** Migrate from `docker compose` (dev-oriented) to Quadlet (production-native, Podman-specific) for deployment:
 
 - Quadlet = systemd generator that converts `.container` files → systemd services
 - Native boot startup, auto-restart, journald logging, auto-updates
@@ -317,7 +317,7 @@ podman stats --no-stream
 | Boot startup        | Extra config     | Native `WantedBy=default.target` |
 | Auto-updates        | Needs watchtower | Built-in `AutoUpdate=registry`   |
 | Process supervision | Limited          | Full systemd                     |
-| Logs                | `podman logs`    | `journalctl`                     |
+| Logs                | `docker logs`    | `journalctl`                     |
 
 **Files to create when implementing:**
 

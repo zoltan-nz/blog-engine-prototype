@@ -17,6 +17,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+  /preview:
+    delete:
+      tags: []
+      operationId: stop_preview
+      responses:
+        '204':
+          description: Preview stopped (or was not running)
   /sites:
     get:
       tags: []
@@ -48,6 +55,28 @@ paths:
           description: Invalid request
         '500':
           description: Management API error
+  /sites/{slug}/preview:
+    post:
+      tags: []
+      operationId: preview_site
+      parameters:
+        - name: slug
+          in: path
+          description: Site slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dev server started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '404':
+          description: Site not found
+        '500':
+          description: Dev server failed to start
 components:
   schemas:
     CreateSiteRequest:
@@ -119,6 +148,10 @@ components:
           type: string
         name:
           type: string
+        previewUrl:
+          type:
+            - string
+            - 'null'
         slug:
           type: string
     SiteListResponse:

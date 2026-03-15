@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
+  import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
 
   const { children } = $props();
 

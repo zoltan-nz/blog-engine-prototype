@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createListSites, createCreateSite } from '../generated-api.js';
-  import type { CreateSiteRequest } from '../generated-api.js';
+  import { createListSites, createCreateSite, createPreviewSite } from "../generated-api.js";
+  import type { CreateSiteRequest } from "../generated-api.js";
 
   // Converts a blog name into a URL-safe slug (directory name + git repo name).
   // Rules: GitHub repo names allow [a-z0-9._-], max 100 chars.
@@ -8,20 +8,22 @@
     return name
       .toLowerCase()
       .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
       .slice(0, 100);
   }
 
   const sitesQuery = createListSites();
   const createSiteMutation = createCreateSite();
+  const previewMutation = createPreviewSite();
+  let previewingSlug = $state<string | null>(null);
 
   let dialogEl = $state<HTMLDialogElement | null>(null);
-  let blogName = $state('');
+  let blogName = $state("");
   let slug = $derived(nameToSlug(blogName));
 
   function openModal() {
-    blogName = '';
+    blogName = "";
     dialogEl?.showModal();
   }
 
@@ -39,21 +41,36 @@
     closeModal();
     sitesQuery.refetch();
   }
+
+  async function handlePreview(slug: string) {
+    previewingSlug = slug;
+    try {
+      const result = await previewMutation.mutateAsync({ slug });
+      if (result.status === 200 && result.data.data.previewUrl) {
+        window.open(result.data.data.previewUrl, '_blank');
+        sitesQuery.refetch();
+      }
+    } finally {
+      previewingSlug = null;
+    }
+  }
 </script>
 
 <div class="mx-auto max-w-4xl">
   <div class="mb-8 flex items-center justify-between">
     <div>
       <h1 class="text-3xl font-bold">Blog Engine Admin</h1>
-      <p class="text-base-content/70 mt-1">Manage your Astro blog sites.</p>
+      <p class="mt-1 text-base-content/70">Manage your Astro blog sites.</p>
     </div>
-    <button class="btn btn-primary" onclick={openModal}>Create a new blog</button>
+    <button class="btn btn-primary" onclick={openModal}
+      >Create a new blog</button
+    >
   </div>
 
   <!-- Site list -->
   {#if sitesQuery.isLoading}
     <div class="flex justify-center py-12">
-      <span class="loading loading-spinner loading-lg"></span>
+      <span class="loading loading-lg loading-spinner"></span>
     </div>
   {:else if sitesQuery.isError}
     <div class="alert alert-error">
@@ -68,11 +85,33 @@
     {:else}
       <ul class="grid gap-4 sm:grid-cols-2">
         {#each sites as site (site.slug)}
-          <li class="card bg-base-100 border-base-300 border shadow-sm">
+          {@const isPreviewing = previewingSlug === site.slug}
+          <li class="card border border-base-300 bg-base-100 shadow-sm">
             <div class="card-body">
-              <h2 class="card-title">{site.name}</h2>
-              <p class="text-base-content/60 font-mono text-sm">{site.slug}</p>
-              <p class="text-base-content/50 truncate text-xs">{site.gitUrl}</p>
+              <div class="flex items-start justify-between">
+                <div>
+                  <h2 class="card-title">
+                    {site.name}
+                    {#if site.previewUrl}
+                      <span class="badge badge-success badge-sm">▶ Live</span>
+                    {/if}
+                  </h2>
+                  <p class="font-mono text-sm text-base-content/60">{site.slug}</p>
+                  <p class="truncate text-xs text-base-content/50">{site.gitUrl}</p>
+                </div>
+              </div>
+              <div class="card-actions mt-2">
+                <button
+                  class="btn btn-sm btn-outline"
+                  disabled={isPreviewing}
+                  onclick={() => handlePreview(site.slug)}
+                >
+                  {#if isPreviewing}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {/if}
+                  Preview
+                </button>
+              </div>
             </div>
           </li>
         {/each}
@@ -95,7 +134,7 @@
           id="blog-name"
           type="text"
           placeholder="My Awesome Blog"
-          class="input input-bordered w-full"
+          class="input-bordered input w-full"
           bind:value={blogName}
           required
         />
@@ -108,28 +147,32 @@
         <input
           id="blog-slug"
           type="text"
-          class="input input-bordered w-full font-mono"
+          class="input-bordered input w-full font-mono"
           value={slug}
           readonly
         />
-        <p class="label label-text-alt text-base-content/50">Used as directory and git repo name</p>
+        <p class="label-text-alt label text-base-content/50">
+          Used as directory and git repo name
+        </p>
       </div>
 
       {#if createSiteMutation.isError}
-        <div class="alert alert-error mb-4">
+        <div class="mb-4 alert alert-error">
           <span>Failed to create blog. Please try again.</span>
         </div>
       {/if}
 
       <div class="modal-action">
-        <button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick={closeModal}
+          >Cancel</button
+        >
         <button
           type="submit"
           class="btn btn-primary"
           disabled={!blogName.trim() || createSiteMutation.isPending}
         >
           {#if createSiteMutation.isPending}
-            <span class="loading loading-spinner loading-sm"></span>
+            <span class="loading loading-sm loading-spinner"></span>
             Creating…
           {:else}
             Create

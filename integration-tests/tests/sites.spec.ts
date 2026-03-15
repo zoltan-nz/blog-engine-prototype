@@ -68,3 +68,56 @@ test.describe('Sites - UI', () => {
     await expect(page.getByText('UI Test Blog')).toBeVisible({ timeout: 280_000 });
   });
 });
+
+test.describe('Sites - Preview', () => {
+  // Ensure a site named 'preview-test' exists before running these tests.
+  // The slug is fixed so this beforeAll is idempotent across retries.
+  // Timeout is passed as the second arg — test.setTimeout() inside beforeAll does not apply to the hook itself.
+  test.beforeAll(async ({ request }) => {
+    const resp = await request.post(`${BACKEND_URL}/sites`, {
+      data: { name: 'Preview Test Blog', slug: 'preview-test' },
+    });
+    // 201 = created; 409 = already exists (idempotent). Any other status is a setup failure.
+    expect([201, 409]).toContain(resp.status());
+  }, 120_000); // 120s: pnpm create astro is slow
+
+  test.afterEach(async ({ request }) => {
+    // Stop the active preview server so each test starts from a clean state.
+    // Intentionally unconditional — DELETE /preview is idempotent (204 even if nothing is running).
+    await request.delete(`${BACKEND_URL}/preview`);
+  });
+
+  test('POST /sites/:slug/preview returns previewUrl', async ({ request }) => {
+    test.setTimeout(60_000);
+    const resp = await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(body.data).toHaveProperty('previewUrl');
+    expect(body.data.previewUrl).toContain('4321');
+  });
+
+  test('previewUrl actually serves the Astro site', async ({ request }) => {
+    test.setTimeout(60_000);
+    const body = await (await request.post(`${BACKEND_URL}/sites/preview-test/preview`)).json();
+    const preview = await request.get(body.data.previewUrl);
+    expect(preview.status()).toBe(200);
+  });
+
+  test('GET /sites shows previewUrl set for active site', async ({ request }) => {
+    test.setTimeout(60_000);
+    await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
+    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
+    const active = sites.find((s: { slug: string }) => s.slug === 'preview-test');
+    expect(active.previewUrl).toBeTruthy();
+    const others = sites.filter((s: { slug: string }) => s.slug !== 'preview-test');
+    others.forEach((s: { previewUrl: string | null }) => expect(s.previewUrl).toBeNull());
+  });
+
+  test('UI: site card shows "▶ Live" badge when preview is active', async ({ page, request }) => {
+    test.setTimeout(60_000);
+    await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
+    await page.goto(FRONTEND_URL);
+    const badge = page.getByText('▶ Live');
+    await expect(badge).toBeVisible();
+  });
+});

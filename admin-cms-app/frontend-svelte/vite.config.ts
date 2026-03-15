@@ -20,9 +20,7 @@ export default defineConfig({
           alias: {
             // Mock SvelteKit's public env module for isolated component tests.
             // In production, SvelteKit injects this via SSR; tests need a stub.
-            "$env/dynamic/public": resolve(
-              "./src/lib/test/mocks/env.ts",
-            ),
+            "$env/dynamic/public": resolve("./src/lib/test/mocks/env.ts"),
           },
         },
 

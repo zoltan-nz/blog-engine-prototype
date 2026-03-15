@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
@@ -121,6 +121,7 @@ pub struct SiteData {
     pub slug: String,
     pub name: String,
     pub git_url: String,
+    pub preview_url: Option<String>,
 }
 
 /// Request body for creating a new site.
@@ -210,6 +211,7 @@ pub async fn create_site(
                 slug: req.slug,
                 name: req.name,
                 git_url: String::new(),
+                preview_url: None,
             });
             (StatusCode::CREATED, Json(SiteResponse::new(site))).into_response()
         }
@@ -228,6 +230,76 @@ pub async fn create_site(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/sites/{slug}/preview",
+    params(
+        ("slug" = String, Path, description = "Site slug")
+    ),
+    responses(
+        (status = 200, description = "Dev server started", body = SiteResponse),
+        (status = 404, description = "Site not found"),
+        (status = 500, description = "Dev server failed to start"),
+    )
+)]
+pub async fn preview_site(
+    Path(slug): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    info!(slug = %slug, "Preview site requested");
+    let url = format!("{}/sites/{}/preview", state.astro_management_url, slug);
+    match state.http_client.post(&url).send().await {
+        Ok(resp) if resp.status() == StatusCode::NOT_FOUND => {
+            let err: serde_json::Value = resp.json().await.unwrap_or_default();
+            (StatusCode::NOT_FOUND, Json(err)).into_response()
+        }
+        Ok(resp) if resp.status().is_success() => {
+            let site: SiteData = resp.json().await.unwrap_or_else(|_| SiteData {
+                slug: slug.clone(),
+                name: slug.clone(),
+                git_url: String::new(),
+                preview_url: None,
+            });
+            (StatusCode::OK, Json(SiteResponse::new(site))).into_response()
+        }
+        Ok(resp) => {
+            let err: serde_json::Value = resp.json().await.unwrap_or_default();
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(err)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to reach management API: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Management API unavailable" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[utoipa::path(
+    delete,
+    path = "/preview",
+    responses(
+        (status = 204, description = "Preview stopped (or was not running)"),
+    )
+)]
+pub async fn stop_preview(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    info!("Stop preview requested");
+    let url = format!("{}/preview", state.astro_management_url);
+    match state.http_client.delete(&url).send().await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to reach management API: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Management API unavailable" })),
+            )
+                .into_response()
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // OpenAPI doc
 // ---------------------------------------------------------------------------
@@ -235,7 +307,7 @@ pub async fn create_site(
 #[derive(OpenApi)]
 #[openapi(
     info(title = "Blog Engine API", version = env!("CARGO_PKG_VERSION"), description = "API for managing Astro blog sites"),
-    paths(healthz, list_sites, create_site),
+    paths(healthz, list_sites, create_site, preview_site, stop_preview),
     components(schemas(
         HealthResponse, HealthData, HealthStatus,
         SiteResponse, SiteListResponse, SiteData, CreateSiteRequest,
@@ -258,6 +330,7 @@ mod tests {
             slug: "my-blog".into(),
             name: "My Blog".into(),
             git_url: "/app/git-repos/my-blog.git".into(),
+            preview_url: None,
         };
         let json = serde_json::to_value(&site).unwrap();
         assert_eq!(json["gitUrl"], "/app/git-repos/my-blog.git");
@@ -283,11 +356,40 @@ mod tests {
             slug: "test".into(),
             name: "Test".into(),
             git_url: "/repos/test.git".into(),
+            preview_url: None,
         }];
         let resp = SiteListResponse::new(sites);
         let json = serde_json::to_value(&resp).unwrap();
         assert!(json["data"].is_array());
         assert_eq!(json["data"].as_array().unwrap().len(), 1);
         assert!(json["meta"].is_object());
+    }
+
+    #[test]
+    fn site_data_serializes_preview_url_as_null_when_none() {
+        let site = SiteData {
+            slug: "s".into(),
+            name: "S".into(),
+            git_url: "g".into(),
+            preview_url: None,
+        };
+        let json = serde_json::to_value(&site).unwrap();
+        assert_eq!(json["previewUrl"], serde_json::Value::Null);
+        assert!(
+            json.get("preview_url").is_none(),
+            "snake_case must not appear"
+        );
+    }
+
+    #[test]
+    fn site_data_serializes_preview_url_when_some() {
+        let site = SiteData {
+            slug: "s".into(),
+            name: "S".into(),
+            git_url: "g".into(),
+            preview_url: Some("http://localhost:4321".into()),
+        };
+        let json = serde_json::to_value(&site).unwrap();
+        assert_eq!(json["previewUrl"], "http://localhost:4321");
     }
 }

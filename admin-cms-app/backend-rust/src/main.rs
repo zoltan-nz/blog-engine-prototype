@@ -33,6 +33,8 @@ async fn main() {
     let (router, api) = OpenApiRouter::<Arc<AppState>>::with_openapi(ApiDoc::openapi())
         .routes(routes!(backend_rust::healthz))
         .routes(routes!(backend_rust::list_sites, backend_rust::create_site))
+        .routes(routes!(backend_rust::preview_site))
+        .routes(routes!(backend_rust::stop_preview))
         .split_for_parts();
 
     let app = router

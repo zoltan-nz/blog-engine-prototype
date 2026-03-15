@@ -50,7 +50,7 @@ mise dev-gen-open-api
 - **Frontends:** SvelteKit, React (DaisyUI)
 - **Backends:** Node.js/Fastify, Rust/Axum
 - **Static Site:** Astro
-- **Containers:** Podman + Compose (Alpine Linux)
+- **Containers:** Docker + Compose (Alpine Linux)
 - **API Contract:** OpenAPI 3.1
 
 ## Setup Tools with `mise`

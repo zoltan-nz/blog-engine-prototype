@@ -47,7 +47,7 @@ All services run in Docker containers orchestrated by `compose.yaml` with profil
 | Error format    | RFC 9457 Problem Details   | Industry standard                            |
 | Response format | `{ data, meta }` envelope  | Simple, room for metadata                    |
 | Database        | None (Git + filesystem)    | Git-native, no lock-in                       |
-| Containers      | Docker/Podman + Compose    | Alpine Linux base, profiles for variants     |
+| Containers      | Docker + Compose           | Alpine Linux base, profiles for variants     |
 | Code generation | utoipa → orval             | Rust generates OpenAPI YAML, orval generates svelte-query and react-query clients |
 
 ---
@@ -358,7 +358,7 @@ When ready to add real GitHub support, the work is mostly implementing the secon
 | 2025-12-19 | RFC 9457 for errors                         | Industry standard                                                    |
 | 2025-12-19 | Simple envelope `{ data, meta }`            | Easy serialization                                                   |
 | 2025-12-19 | Filesystem as source of truth               | No database needed                                                   |
-| 2025-12-19 | Podman + `podman compose`                   | Rootless containers                                                  |
+| 2025-12-19 | Docker + `docker compose`                   | Containerized services                                               |
 | 2025-12-19 | Alpine Linux base                           | Minimal resources                                                    |
 | 2025-12-19 | SvelteKit + Rust sweet spot                 | Preferred combination                                                |
 | 2025-12-21 | `/healthz` endpoint                         | K8s compatible health checks                                         |
@@ -403,6 +403,6 @@ Rust is roughly 2x smaller in image size and uses 35x less RAM.
 
 **Astro builds:** Trigger Astro builds from the admin UI. Locally, this runs `astro build` inside the container. In production, this could trigger GitHub Actions via `repository_dispatch`.
 
-**Quadlet production deployment:** Migrate from `podman compose` to Quadlet (systemd-native) for production with auto-updates, journald logging, and native boot startup. Images pushed to ghcr.io.
+**Quadlet production deployment:** Migrate from `docker compose` to Quadlet (systemd-native, Podman-specific) for production with auto-updates, journald logging, and native boot startup. Images pushed to ghcr.io.
 
 **Gitea as local provider upgrade:** For a richer local dev experience, replace bare repos with a Gitea container. This gives a GitHub-like web UI for browsing repos locally, and Gitea supports OAuth2 — making the local environment even closer to production. The provider abstraction means this is a drop-in replacement.

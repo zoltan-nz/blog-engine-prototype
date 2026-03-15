@@ -12,5 +12,6 @@ RUN mkdir -p /app/astro-sites /app/git-repos
 COPY management-api.mjs ./
 
 EXPOSE 4320
+EXPOSE 4321
 
 CMD ["node", "management-api.mjs"]

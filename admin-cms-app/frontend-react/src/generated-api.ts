@@ -70,6 +70,8 @@ export interface HealthResponse {
 export interface SiteData {
   gitUrl: string;
   name: string;
+  /** @nullable */
+  previewUrl?: string | null;
   slug: string;
 }
 
@@ -229,6 +231,91 @@ export function useHealthz<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type stopPreviewResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type stopPreviewResponseSuccess = stopPreviewResponse204 & {
+  headers: Headers;
+};
+export type stopPreviewResponse = stopPreviewResponseSuccess;
+
+export const getStopPreviewUrl = () => {
+  return `/preview`;
+};
+
+export const stopPreview = async (
+  options?: RequestInit,
+): Promise<stopPreviewResponse> => {
+  return fetchWithBaseUrl<stopPreviewResponse>(getStopPreviewUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getStopPreviewMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof stopPreview>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof fetchWithBaseUrl>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof stopPreview>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["stopPreview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof stopPreview>>,
+    void
+  > = () => {
+    return stopPreview(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StopPreviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof stopPreview>>
+>;
+
+export type StopPreviewMutationError = unknown;
+
+export const useStopPreview = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof stopPreview>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof stopPreview>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getStopPreviewMutationOptions(options), queryClient);
+};
 
 export type listSitesResponse200 = {
   data: SiteListResponse;
@@ -476,4 +563,111 @@ export const useCreateSite = <TError = void, TContext = unknown>(
   TContext
 > => {
   return useMutation(getCreateSiteMutationOptions(options), queryClient);
+};
+
+export type previewSiteResponse200 = {
+  data: SiteResponse;
+  status: 200;
+};
+
+export type previewSiteResponse404 = {
+  data: void;
+  status: 404;
+};
+
+export type previewSiteResponse500 = {
+  data: void;
+  status: 500;
+};
+
+export type previewSiteResponseSuccess = previewSiteResponse200 & {
+  headers: Headers;
+};
+export type previewSiteResponseError = (
+  | previewSiteResponse404
+  | previewSiteResponse500
+) & {
+  headers: Headers;
+};
+
+export type previewSiteResponse =
+  | previewSiteResponseSuccess
+  | previewSiteResponseError;
+
+export const getPreviewSiteUrl = (slug: string) => {
+  return `/sites/${slug}/preview`;
+};
+
+export const previewSite = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<previewSiteResponse> => {
+  return fetchWithBaseUrl<previewSiteResponse>(getPreviewSiteUrl(slug), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPreviewSiteMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewSite>>,
+    TError,
+    { slug: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof fetchWithBaseUrl>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewSite>>,
+  TError,
+  { slug: string },
+  TContext
+> => {
+  const mutationKey = ["previewSite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewSite>>,
+    { slug: string }
+  > = (props) => {
+    const { slug } = props ?? {};
+
+    return previewSite(slug, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewSiteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewSite>>
+>;
+
+export type PreviewSiteMutationError = void;
+
+export const usePreviewSite = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewSite>>,
+      TError,
+      { slug: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewSite>>,
+  TError,
+  { slug: string },
+  TContext
+> => {
+  return useMutation(getPreviewSiteMutationOptions(options), queryClient);
 };
