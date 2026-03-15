@@ -6,6 +6,7 @@ networks:
 
 volumes:
   astro-sites:
+  git-repos:
 
 services:
   astro-server:
@@ -16,11 +17,20 @@ services:
       - blog-net
     volumes:
       - astro-sites:/app/astro-sites
+      - git-repos:/app/git-repos
+    environment:
+      - MANAGEMENT_PORT=4320
     healthcheck:
-      test: ['CMD', 'node', '-e', "console.log('ok')"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('node:http').get('http://127.0.0.1:4320/sites', r => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 5s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
     ports:
       - '4321:4321'
 
@@ -33,6 +43,12 @@ services:
       - blog-net
     ports:
       - '8080:8080'
+    environment:
+      - GIT_PROVIDER=local
+      - ASTRO_MANAGEMENT_URL=http://astro-server:4320
+    depends_on:
+      astro-server:
+        condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1']
       interval: 5s
@@ -55,6 +71,11 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - CHOKIDAR_INTERVAL=100
+      - GIT_PROVIDER=local
+      - ASTRO_MANAGEMENT_URL=http://astro-server:4320
+    depends_on:
+      astro-server:
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
       interval: 5s

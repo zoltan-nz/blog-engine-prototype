@@ -5,20 +5,31 @@
  * API for managing Astro blog sites
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
 import { fetchWithBaseUrl } from "./lib/api/fetch-with-base-url";
+/**
+ * Request body for creating a new site.
+ */
+export interface CreateSiteRequest {
+  name: string;
+  slug: string;
+}
+
 export type HealthStatus = (typeof HealthStatus)[keyof typeof HealthStatus];
 
 export const HealthStatus = {
@@ -45,15 +56,43 @@ export interface Meta {
   version: string;
 }
 
-export interface Envelop {
+/**
+ * Response envelope for the health endpoint.
+ */
+export interface HealthResponse {
   data: HealthData;
+  meta: Meta;
+}
+
+/**
+ * A single Astro site managed by the CMS.
+ */
+export interface SiteData {
+  gitUrl: string;
+  name: string;
+  slug: string;
+}
+
+/**
+ * Response envelope for a list of sites.
+ */
+export interface SiteListResponse {
+  data: SiteData[];
+  meta: Meta;
+}
+
+/**
+ * Response envelope for a single site.
+ */
+export interface SiteResponse {
+  data: SiteData;
   meta: Meta;
 }
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export type healthzResponse200 = {
-  data: Envelop;
+  data: HealthResponse;
   status: 200;
 };
 
@@ -190,3 +229,251 @@ export function useHealthz<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type listSitesResponse200 = {
+  data: SiteListResponse;
+  status: 200;
+};
+
+export type listSitesResponseSuccess = listSitesResponse200 & {
+  headers: Headers;
+};
+export type listSitesResponse = listSitesResponseSuccess;
+
+export const getListSitesUrl = () => {
+  return `/sites`;
+};
+
+export const listSites = async (
+  options?: RequestInit,
+): Promise<listSitesResponse> => {
+  return fetchWithBaseUrl<listSitesResponse>(getListSitesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSitesQueryKey = () => {
+  return [`/sites`] as const;
+};
+
+export const getListSitesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSites>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listSites>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof fetchWithBaseUrl>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSitesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSites>>> = ({
+    signal,
+  }) => listSites({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSites>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSitesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSites>>
+>;
+export type ListSitesQueryError = unknown;
+
+export function useListSites<
+  TData = Awaited<ReturnType<typeof listSites>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSites>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSites>>,
+          TError,
+          Awaited<ReturnType<typeof listSites>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListSites<
+  TData = Awaited<ReturnType<typeof listSites>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSites>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSites>>,
+          TError,
+          Awaited<ReturnType<typeof listSites>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListSites<
+  TData = Awaited<ReturnType<typeof listSites>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSites>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useListSites<
+  TData = Awaited<ReturnType<typeof listSites>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSites>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListSitesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export type createSiteResponse201 = {
+  data: SiteResponse;
+  status: 201;
+};
+
+export type createSiteResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type createSiteResponse500 = {
+  data: void;
+  status: 500;
+};
+
+export type createSiteResponseSuccess = createSiteResponse201 & {
+  headers: Headers;
+};
+export type createSiteResponseError = (
+  | createSiteResponse400
+  | createSiteResponse500
+) & {
+  headers: Headers;
+};
+
+export type createSiteResponse =
+  | createSiteResponseSuccess
+  | createSiteResponseError;
+
+export const getCreateSiteUrl = () => {
+  return `/sites`;
+};
+
+export const createSite = async (
+  createSiteRequest: CreateSiteRequest,
+  options?: RequestInit,
+): Promise<createSiteResponse> => {
+  return fetchWithBaseUrl<createSiteResponse>(getCreateSiteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSiteRequest),
+  });
+};
+
+export const getCreateSiteMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSite>>,
+    TError,
+    { data: CreateSiteRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof fetchWithBaseUrl>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSite>>,
+  TError,
+  { data: CreateSiteRequest },
+  TContext
+> => {
+  const mutationKey = ["createSite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSite>>,
+    { data: CreateSiteRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSite(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSiteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSite>>
+>;
+export type CreateSiteMutationBody = CreateSiteRequest;
+export type CreateSiteMutationError = void;
+
+export const useCreateSite = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSite>>,
+      TError,
+      { data: CreateSiteRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof fetchWithBaseUrl>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSite>>,
+  TError,
+  { data: CreateSiteRequest },
+  TContext
+> => {
+  return useMutation(getCreateSiteMutationOptions(options), queryClient);
+};

@@ -16,19 +16,51 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelop'
+                $ref: '#/components/schemas/HealthResponse'
+  /sites:
+    get:
+      tags: []
+      operationId: list_sites
+      responses:
+        '200':
+          description: List of all sites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteListResponse'
+    post:
+      tags: []
+      operationId: create_site
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+        required: true
+      responses:
+        '201':
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '400':
+          description: Invalid request
+        '500':
+          description: Management API error
 components:
   schemas:
-    Envelop:
+    CreateSiteRequest:
       type: object
+      description: Request body for creating a new site.
       required:
-        - data
-        - meta
+        - name
+        - slug
       properties:
-        data:
-          $ref: '#/components/schemas/HealthData'
-        meta:
-          $ref: '#/components/schemas/Meta'
+        name:
+          type: string
+        slug:
+          type: string
     HealthData:
       type: object
       required:
@@ -39,6 +71,17 @@ components:
           $ref: '#/components/schemas/HealthStatus'
         version:
           type: string
+    HealthResponse:
+      type: object
+      description: Response envelope for the health endpoint.
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/HealthData'
+        meta:
+          $ref: '#/components/schemas/Meta'
     HealthStatus:
       type: string
       enum:
@@ -64,3 +107,41 @@ components:
       enum:
         - backend-node
         - backend-rust
+    SiteData:
+      type: object
+      description: A single Astro site managed by the CMS.
+      required:
+        - slug
+        - name
+        - gitUrl
+      properties:
+        gitUrl:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+    SiteListResponse:
+      type: object
+      description: Response envelope for a list of sites.
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteData'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    SiteResponse:
+      type: object
+      description: Response envelope for a single site.
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/SiteData'
+        meta:
+          $ref: '#/components/schemas/Meta'

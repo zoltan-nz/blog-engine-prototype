@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 import devtoolsJson from "vite-plugin-devtools-json";
 import { playwright } from "@vitest/browser-playwright";
+import { resolve } from "node:path";
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit(), devtoolsJson(), tsconfigPaths()],
@@ -14,6 +15,16 @@ export default defineConfig({
     projects: [
       {
         extends: "./vite.config.ts",
+
+        resolve: {
+          alias: {
+            // Mock SvelteKit's public env module for isolated component tests.
+            // In production, SvelteKit injects this via SSR; tests need a stub.
+            "$env/dynamic/public": resolve(
+              "./src/lib/test/mocks/env.ts",
+            ),
+          },
+        },
 
         test: {
           name: "client",

@@ -1,15 +1,23 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+
+use std::sync::Arc;
+
 use axum::Json;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::info;
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
 
+// ---------------------------------------------------------------------------
+// Shared meta infrastructure
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
-enum MetaServerName {
-    // For the Open API specification
+pub enum MetaServerName {
     #[allow(dead_code)]
     BackendNode,
     BackendRust,
@@ -17,11 +25,11 @@ enum MetaServerName {
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-struct Meta {
-    timestamp: String,
-    request_id: String,
-    version: &'static str,
-    server_name: MetaServerName,
+pub struct Meta {
+    pub timestamp: String,
+    pub request_id: String,
+    pub version: &'static str,
+    pub server_name: MetaServerName,
 }
 
 impl Default for Meta {
@@ -35,28 +43,33 @@ impl Default for Meta {
     }
 }
 
+// ---------------------------------------------------------------------------
+// App state
+// ---------------------------------------------------------------------------
+
+pub struct AppState {
+    pub astro_management_url: String,
+    pub http_client: reqwest::Client,
+}
+
+impl AppState {
+    pub fn new(astro_management_url: String) -> Self {
+        Self {
+            astro_management_url,
+            http_client: reqwest::Client::new(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Health endpoint
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Default, Clone, Copy, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 enum HealthStatus {
     #[default]
     Healthy,
-    // Degraded,
-    // Unhealthy,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-struct Envelop<T: ToSchema> {
-    data: T,
-    meta: Meta,
-}
-
-impl<T: ToSchema> Envelop<T> {
-    fn new(data: T) -> Self {
-        Self {
-            data,
-            meta: Meta::default(),
-        }
-    }
 }
 
 #[derive(Debug, Default, Serialize, ToSchema)]
@@ -65,7 +78,21 @@ struct HealthData {
     version: &'static str,
 }
 
-type HealthResponse = Envelop<HealthData>;
+/// Response envelope for the health endpoint.
+#[derive(Debug, Serialize, ToSchema)]
+struct HealthResponse {
+    data: HealthData,
+    meta: Meta,
+}
+
+impl HealthResponse {
+    fn new(data: HealthData) -> Self {
+        Self {
+            data,
+            meta: Meta::default(),
+        }
+    }
+}
 
 #[utoipa::path(
     get,
@@ -83,10 +110,184 @@ pub async fn healthz() -> impl IntoResponse {
     (StatusCode::OK, Json(response))
 }
 
+// ---------------------------------------------------------------------------
+// Sites endpoints
+// ---------------------------------------------------------------------------
+
+/// A single Astro site managed by the CMS.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteData {
+    pub slug: String,
+    pub name: String,
+    pub git_url: String,
+}
+
+/// Request body for creating a new site.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct CreateSiteRequest {
+    pub name: String,
+    pub slug: String,
+}
+
+/// Response envelope for a single site.
+#[derive(Debug, Serialize, ToSchema)]
+struct SiteResponse {
+    data: SiteData,
+    meta: Meta,
+}
+
+impl SiteResponse {
+    fn new(data: SiteData) -> Self {
+        Self {
+            data,
+            meta: Meta::default(),
+        }
+    }
+}
+
+/// Response envelope for a list of sites.
+#[derive(Debug, Serialize, ToSchema)]
+struct SiteListResponse {
+    data: Vec<SiteData>,
+    meta: Meta,
+}
+
+impl SiteListResponse {
+    fn new(data: Vec<SiteData>) -> Self {
+        Self {
+            data,
+            meta: Meta::default(),
+        }
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/sites",
+    responses(
+        (status = 200, description = "List of all sites", body = SiteListResponse)
+    )
+)]
+pub async fn list_sites(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    info!("List sites requested");
+    let url = format!("{}/sites", state.astro_management_url);
+    match state.http_client.get(&url).send().await {
+        Ok(resp) => {
+            let sites: Vec<SiteData> = resp.json().await.unwrap_or_default();
+            (StatusCode::OK, Json(SiteListResponse::new(sites))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to reach management API: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Management API unavailable" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/sites",
+    request_body = CreateSiteRequest,
+    responses(
+        (status = 201, description = "Site created", body = SiteResponse),
+        (status = 400, description = "Invalid request"),
+        (status = 500, description = "Management API error"),
+    )
+)]
+pub async fn create_site(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CreateSiteRequest>,
+) -> impl IntoResponse {
+    info!(slug = %req.slug, "Create site requested");
+    let url = format!("{}/sites", state.astro_management_url);
+    match state.http_client.post(&url).json(&req).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            let site: SiteData = resp.json().await.unwrap_or_else(|_| SiteData {
+                slug: req.slug,
+                name: req.name,
+                git_url: String::new(),
+            });
+            (StatusCode::CREATED, Json(SiteResponse::new(site))).into_response()
+        }
+        Ok(resp) => {
+            let err: serde_json::Value = resp.json().await.unwrap_or_default();
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(err)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to reach management API: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Management API unavailable" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// OpenAPI doc
+// ---------------------------------------------------------------------------
+
 #[derive(OpenApi)]
 #[openapi(
     info(title = "Blog Engine API", version = env!("CARGO_PKG_VERSION"), description = "API for managing Astro blog sites"),
-    paths(healthz),
-    components(schemas(HealthResponse, HealthData, HealthStatus, Meta, MetaServerName))
+    paths(healthz, list_sites, create_site),
+    components(schemas(
+        HealthResponse, HealthData, HealthStatus,
+        SiteResponse, SiteListResponse, SiteData, CreateSiteRequest,
+        Meta, MetaServerName
+    ))
 )]
 pub struct ApiDoc;
+
+// ---------------------------------------------------------------------------
+// Unit tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn site_data_serializes_git_url_as_camel_case() {
+        let site = SiteData {
+            slug: "my-blog".into(),
+            name: "My Blog".into(),
+            git_url: "/app/git-repos/my-blog.git".into(),
+        };
+        let json = serde_json::to_value(&site).unwrap();
+        assert_eq!(json["gitUrl"], "/app/git-repos/my-blog.git");
+        assert_eq!(json["slug"], "my-blog");
+        assert_eq!(json["name"], "My Blog");
+        assert!(
+            json.get("git_url").is_none(),
+            "snake_case key must not appear"
+        );
+    }
+
+    #[test]
+    fn create_site_request_deserializes() {
+        let raw = r#"{"name": "My Blog", "slug": "my-blog"}"#;
+        let req: CreateSiteRequest = serde_json::from_str(raw).unwrap();
+        assert_eq!(req.name, "My Blog");
+        assert_eq!(req.slug, "my-blog");
+    }
+
+    #[test]
+    fn site_list_response_wraps_vec_with_meta() {
+        let sites = vec![SiteData {
+            slug: "test".into(),
+            name: "Test".into(),
+            git_url: "/repos/test.git".into(),
+        }];
+        let resp = SiteListResponse::new(sites);
+        let json = serde_json::to_value(&resp).unwrap();
+        assert!(json["data"].is_array());
+        assert_eq!(json["data"].as_array().unwrap().len(), 1);
+        assert!(json["meta"].is_object());
+    }
+}

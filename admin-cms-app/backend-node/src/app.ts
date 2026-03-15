@@ -5,13 +5,14 @@ import { dirname, join } from 'node:path';
 import cors from '@fastify/cors';
 import openapiGlue from 'fastify-openapi-glue';
 import { healthz } from './handlers/healthz.js';
+import { list_sites, create_site } from './handlers/sites.js';
 
 type FastifyOptions = FastifyHttpOptions<https.Server, FastifyBaseLogger>;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const specPath = join(__dirname, '../../../open-api-contracts/api.yaml');
 
-const serviceHandlers = { healthz };
+const serviceHandlers = { healthz, list_sites, create_site };
 
 const buildFastifyApp = async (opts?: FastifyOptions) => {
   const app = Fastify({

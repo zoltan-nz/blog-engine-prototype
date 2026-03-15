@@ -43,7 +43,7 @@ run = "docker compose --profile node --profile react up --remove-orphans --build
 
 [tasks.down]
 description = "Stop and remove compose stack"
-run = "docker compose --profile rust --profile node --profile svelte --profile react down --remove-orphans"
+run = "docker compose --profile rust --profile node --profile svelte --profile react down --remove-orphans --volumes"
 
 [tasks.logs]
 description = "Follow compose logs"

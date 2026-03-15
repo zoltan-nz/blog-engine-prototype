@@ -20,17 +20,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_sites"];
+        put?: never;
+        post: operations["create_site"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Envelop: {
-            data: components["schemas"]["HealthData"];
-            meta: components["schemas"]["Meta"];
+        /** @description Request body for creating a new site. */
+        CreateSiteRequest: {
+            name: string;
+            slug: string;
         };
         HealthData: {
             status: components["schemas"]["HealthStatus"];
             version: string;
+        };
+        /** @description Response envelope for the health endpoint. */
+        HealthResponse: {
+            data: components["schemas"]["HealthData"];
+            meta: components["schemas"]["Meta"];
         };
         /** @enum {string} */
         HealthStatus: "healthy";
@@ -42,6 +64,22 @@ export interface components {
         };
         /** @enum {string} */
         MetaServerName: "backend-node" | "backend-rust";
+        /** @description A single Astro site managed by the CMS. */
+        SiteData: {
+            gitUrl: string;
+            name: string;
+            slug: string;
+        };
+        /** @description Response envelope for a list of sites. */
+        SiteListResponse: {
+            data: components["schemas"]["SiteData"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** @description Response envelope for a single site. */
+        SiteResponse: {
+            data: components["schemas"]["SiteData"];
+            meta: components["schemas"]["Meta"];
+        };
     };
     responses: never;
     parameters: never;
@@ -66,8 +104,66 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Envelop"];
+                    "application/json": components["schemas"]["HealthResponse"];
                 };
+            };
+        };
+    };
+    list_sites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of all sites */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteListResponse"];
+                };
+            };
+        };
+    };
+    create_site: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description Site created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Management API error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

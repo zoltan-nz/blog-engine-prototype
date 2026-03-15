@@ -1,5 +1,6 @@
-use backend_rust::ApiDoc;
+use backend_rust::{ApiDoc, AppState};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
@@ -19,18 +20,25 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    let astro_management_url = std::env::var("ASTRO_MANAGEMENT_URL")
+        .unwrap_or_else(|_| "http://localhost:4320".to_string());
+
+    let state = Arc::new(AppState::new(astro_management_url));
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let (router, api) = OpenApiRouter::<()>::with_openapi(ApiDoc::openapi())
+    let (router, api) = OpenApiRouter::<Arc<AppState>>::with_openapi(ApiDoc::openapi())
         .routes(routes!(backend_rust::healthz))
+        .routes(routes!(backend_rust::list_sites, backend_rust::create_site))
         .split_for_parts();
 
     let app = router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
-        .layer(cors);
+        .layer(cors)
+        .with_state(state);
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080);
     info!(%addr, "Server listening");
