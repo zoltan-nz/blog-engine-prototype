@@ -1,6 +1,6 @@
 # Blog Engine Prototype
 
-A headless CMS for managing Astro-based static sites. Built as a framework comparison sandbox.
+A headless CMS for managing Astro-based static sites.
 
 ## Quick Start
 
@@ -13,12 +13,12 @@ mise run up
 # List all the tasks
 mise tasks
 
-# Run with SvelteKit + Rust (sweet spot)
-docker compose --profile rust --profile svelte
+# Run with SvelteKit + Rust (sweet spot) in watch mode
+mise run up-svelte-rust-watch
 
 # Access
 # Admin UI:  http://localhost:3000
-# API:       http://localhost:8000
+# API:       http://localhost:8080
 # Preview:   http://localhost:4321
 ```
 
@@ -31,20 +31,6 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 - Content stored as Markdown files (no database)
 - Deploy to GitHub Pages / Cloudflare Pages
 
-## Documentation
-
-- [Architecture](./ARCHITECTURE.md) — System design, decisions, API format, findings, benchmarks, comparisons
-
-## Development
-
-```bash
-# Run integration tests
-cd tests/integration && pnpm exec playwright test
-
-# Generate OpenAPI yaml specification from the Rust backend code
-mise dev-gen-open-api
-```
-
 ## Tech Stack
 
 - **Frontends:** SvelteKit, React (DaisyUI)
@@ -52,27 +38,6 @@ mise dev-gen-open-api
 - **Static Site:** Astro
 - **Containers:** Docker + Compose (Alpine Linux)
 - **API Contract:** OpenAPI 3.1
-
-## Setup Tools with `mise`
-
-We use [mise](https://mise.jdx.dev/) for tool version management and task running.
-
-```bash
-# Install required tools (Node, pnpm, Rust)
-mise install
-
-# List available tasks
-mise tasks
-
-# Common tasks
-mise run up          # Start all services (both backends)
-mise run up-rust     # Start with Rust backend only
-mise run up-node     # Start with Node backend only
-mise run down        # Stop all services
-mise run test        # Run integration tests
-mise run health      # Check all health endpoints
-mise run stats       # Show container resource usage
-```
 
 ## License
 
