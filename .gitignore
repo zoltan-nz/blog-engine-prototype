@@ -13,5 +13,3 @@ dist
 
 test-results
 .bruno
-!./.claude/CLAUDE.md
-!./.claude/ARCHITECTURE.md
