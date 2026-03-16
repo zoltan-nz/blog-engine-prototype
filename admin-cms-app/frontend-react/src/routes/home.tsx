@@ -98,28 +98,37 @@ export default function Home() {
             {sites.map((site) => {
               const isPreviewing = previewingSlug === site.slug;
               return (
-                <li key={site.slug} className="card bg-base-100 border-base-300 border shadow-sm">
+                <li
+                  key={site.slug}
+                  className="card border border-base-300 bg-base-100 shadow-sm"
+                >
                   <div className="card-body">
                     <div className="flex items-start justify-between">
                       <div>
                         <h2 className="card-title">
                           {site.name}
                           {site.previewUrl && (
-                            <span className="badge badge-success badge-sm">▶ Live</span>
+                            <span className="badge badge-sm badge-success">
+                              ▶ Live
+                            </span>
                           )}
                         </h2>
-                        <p className="text-base-content/60 font-mono text-sm">{site.slug}</p>
-                        <p className="text-base-content/50 truncate text-xs">{site.gitUrl}</p>
+                        <p className="font-mono text-sm text-base-content/60">
+                          {site.slug}
+                        </p>
+                        <p className="truncate text-xs text-base-content/50">
+                          {site.gitUrl}
+                        </p>
                       </div>
                     </div>
-                    <div className="card-actions mt-2">
+                    <div className="mt-2 card-actions">
                       <button
-                        className="btn btn-sm btn-outline"
+                        className="btn btn-outline btn-sm"
                         disabled={isPreviewing}
                         onClick={() => handlePreview(site.slug)}
                       >
                         {isPreviewing && (
-                          <span className="loading loading-spinner loading-xs"></span>
+                          <span className="loading loading-xs loading-spinner"></span>
                         )}
                         Preview
                       </button>

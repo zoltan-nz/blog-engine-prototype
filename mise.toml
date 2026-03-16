@@ -29,6 +29,10 @@ run = "docker compose --profile node up --remove-orphans --build --renew-anon-vo
 description = "Start SvelteKit + Rust backend (sweet spot combo)"
 run = "docker compose --profile rust --profile svelte up --remove-orphans --build"
 
+[tasks.up-svelte-rust-watch]
+description = "Start SvelteKit + Rust backend (sweet spot combo)"
+run = "docker compose --profile rust --profile svelte up --remove-orphans --build --renew-anon-volumes --watch"
+
 [tasks.up-svelte-rust-d]
 description = "Start SvelteKit + Rust backend detached"
 run = "docker compose --profile rust --profile svelte up --remove-orphans --build -d --wait"

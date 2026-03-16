@@ -7,7 +7,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{trace, info};
 use utoipa::{OpenApi, ToSchema};
 use uuid::Uuid;
 
@@ -102,7 +102,7 @@ impl HealthResponse {
     )
 )]
 pub async fn healthz() -> impl IntoResponse {
-    info!("Health check requested");
+    trace!("Health check requested");
     let response = HealthResponse::new(HealthData {
         status: HealthStatus::Healthy,
         version: env!("CARGO_PKG_VERSION"),

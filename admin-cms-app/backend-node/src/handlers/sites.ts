@@ -40,10 +40,7 @@ export async function create_site(request: FastifyRequest<{ Body: CreateSiteRequ
   return reply.code(201).send({ data: site, meta: makeMeta() });
 }
 
-export async function preview_site(
-  request: FastifyRequest<{ Params: { slug: string } }>,
-  reply: FastifyReply,
-) {
+export async function preview_site(request: FastifyRequest<{ Params: { slug: string } }>, reply: FastifyReply) {
   const { slug } = request.params;
   const resp = await fetch(`${ASTRO_MANAGEMENT_URL}/sites/${slug}/preview`, {
     method: 'POST',

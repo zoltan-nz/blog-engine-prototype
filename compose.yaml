@@ -36,7 +36,7 @@ services:
       - '4321:4321'
 
   backend-rust:
-    profiles: [rust]
+    profiles: [ rust ]
     build:
       context: ./admin-cms-app/backend-rust
       dockerfile: Dockerfile.dev
@@ -50,14 +50,25 @@ services:
     depends_on:
       astro-server:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./admin-cms-app/backend-rust/src
+          target: /app/src
+        - action: rebuild
+          path: ./admin-cms-app/backend-rust/Cargo.toml
+        - action: rebuild
+          path: ./admin-cms-app/backend-rust/Cargo.lock
+
+
     healthcheck:
-      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1']
+      test: [ 'CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1' ]
       interval: 5s
       timeout: 120s
       retries: 5
 
   backend-node:
-    profiles: [node]
+    profiles: [ node ]
     build:
       context: ./admin-cms-app/backend-node
       dockerfile: Dockerfile.dev
@@ -77,14 +88,22 @@ services:
     depends_on:
       astro-server:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./admin-cms-app/backend-node/src
+          target: /app/src
+        - action: rebuild
+          path: ./admin-cms-app/backend-node/package.json
+
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
+      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz' ]
       interval: 5s
       timeout: 5s
       retries: 3
 
   frontend-svelte:
-    profiles: [svelte]
+    profiles: [ svelte ]
     build:
       context: ./admin-cms-app/frontend-svelte
       dockerfile: Dockerfile.dev
@@ -97,14 +116,22 @@ services:
       - PUBLIC_API_BACKEND_URL=http://localhost:8080
     volumes:
       - ./admin-cms-app/frontend-svelte/bin:/app/bin:ro
+    develop:
+      watch:
+        - action: sync
+          path: ./admin-cms-app/frontend-svelte/src
+          target: /app/src
+        - action: rebuild
+          path: ./admin-cms-app/frontend-svelte/package.json
+
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000']
+      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000' ]
       interval: 5s
       timeout: 5s
       retries: 3
 
   frontend-react:
-    profiles: [react]
+    profiles: [ react ]
     build:
       context: ./admin-cms-app/frontend-react
       dockerfile: Dockerfile.dev
@@ -115,14 +142,23 @@ services:
     environment:
       # Let's use the Node.js server as backend for React.
       - VITE_API_BACKEND_URL=http://localhost:8081
-      - CHOKIDAR_USEPOLLING=true
-      - CHOKIDAR_INTERVAL=100
+#      - CHOKIDAR_USEPOLLING=true
+#      - CHOKIDAR_INTERVAL=100
     volumes:
       - ./admin-cms-app/frontend-react/:/app/:ro
       - /app/node_modules
       - /app/.react-router
+    develop:
+      watch:
+        - action: sync
+          path: ./admin-cms-app/frontend-react/src
+          target: /app/src
+        - action: rebuild
+          path: ./admin-cms-app/frontend-react/package.json
+
+
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001']
+      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001' ]
       interval: 5s
       timeout: 5s
       retries: 3

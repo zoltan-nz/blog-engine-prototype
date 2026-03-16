@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { createListSites, createCreateSite, createPreviewSite } from "../generated-api.js";
+  import {
+    createListSites,
+    createCreateSite,
+    createPreviewSite,
+  } from "../generated-api.js";
   import type { CreateSiteRequest } from "../generated-api.js";
 
   // Converts a blog name into a URL-safe slug (directory name + git repo name).
@@ -47,7 +51,7 @@
     try {
       const result = await previewMutation.mutateAsync({ slug });
       if (result.status === 200 && result.data.data.previewUrl) {
-        window.open(result.data.data.previewUrl, '_blank');
+        window.open(result.data.data.previewUrl, "_blank");
         sitesQuery.refetch();
       }
     } finally {
@@ -93,21 +97,25 @@
                   <h2 class="card-title">
                     {site.name}
                     {#if site.previewUrl}
-                      <span class="badge badge-success badge-sm">▶ Live</span>
+                      <span class="badge badge-sm badge-success">▶ Live</span>
                     {/if}
                   </h2>
-                  <p class="font-mono text-sm text-base-content/60">{site.slug}</p>
-                  <p class="truncate text-xs text-base-content/50">{site.gitUrl}</p>
+                  <p class="font-mono text-sm text-base-content/60">
+                    {site.slug}
+                  </p>
+                  <p class="truncate text-xs text-base-content/50">
+                    {site.gitUrl}
+                  </p>
                 </div>
               </div>
-              <div class="card-actions mt-2">
+              <div class="mt-2 card-actions">
                 <button
-                  class="btn btn-sm btn-outline"
+                  class="btn btn-outline btn-sm"
                   disabled={isPreviewing}
                   onclick={() => handlePreview(site.slug)}
                 >
                   {#if isPreviewing}
-                    <span class="loading loading-spinner loading-xs"></span>
+                    <span class="loading loading-xs loading-spinner"></span>
                   {/if}
                   Preview
                 </button>
