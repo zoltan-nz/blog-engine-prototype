@@ -3,6 +3,15 @@ name = "backend-rust"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "blog-engine-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "gen-open-api-yaml"
+path = "src/bin/gen_open_api_yaml.rs"
+
+
 [dependencies]
 axum = "0.8.8"
 reqwest = { version = "0.12", features = ["json"] }
