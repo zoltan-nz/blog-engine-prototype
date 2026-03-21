@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import packageJson from '../../package.json' with { type: 'json' };
 import type { components } from '../generated-api-types.js';
 
-type HealthzResponse = components['schemas']['Envelop'];
+type HealthzResponse = components['schemas']['HealthResponse'];
 type MetaServerName = components['schemas']['MetaServerName'];
 
 export async function healthz(_request: FastifyRequest, _reply: FastifyReply): Promise<HealthzResponse> {
