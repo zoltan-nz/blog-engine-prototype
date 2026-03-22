@@ -266,7 +266,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "backend-rust"
+name = "backend"
 version = "0.1.0"
 dependencies = [
  "axum",

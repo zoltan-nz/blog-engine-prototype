@@ -19,26 +19,13 @@ services:
       - astro-sites:/app/astro-sites
       - git-repos:/app/git-repos
     environment:
-      - MANAGEMENT_PORT=4320
       - PREVIEW_PORT=4321
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "require('node:http').get('http://127.0.0.1:4320/sites', r => process.exit(r.statusCode === 200 ? 0 : 1))",
-        ]
-      interval: 5s
-      timeout: 10s
-      retries: 5
     ports:
       - '4321:4321'
 
-  backend-rust:
-    profiles: [ rust ]
+  backend:
     build:
-      context: ./admin-cms-app/backend-rust
+      context: ./backend
       dockerfile: Dockerfile.dev
     networks:
       - blog-net
@@ -46,119 +33,42 @@ services:
       - '8080:8080'
     environment:
       - GIT_PROVIDER=local
-      - ASTRO_MANAGEMENT_URL=http://astro-server:4320
     depends_on:
-      astro-server:
-        condition: service_healthy
+      - astro-server
     develop:
       watch:
         - action: sync
-          path: ./admin-cms-app/backend-rust/src
+          path: ./backend/src
           target: /app/src
         - action: rebuild
-          path: ./admin-cms-app/backend-rust/Cargo.toml
+          path: ./backend/Cargo.toml
         - action: rebuild
-          path: ./admin-cms-app/backend-rust/Cargo.lock
-
-
+          path: ./backend/Cargo.lock
     healthcheck:
       test: [ 'CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1' ]
       interval: 5s
       timeout: 120s
       retries: 5
 
-  backend-node:
-    profiles: [ node ]
+  frontend:
     build:
-      context: ./admin-cms-app/backend-node
-      dockerfile: Dockerfile.dev
-    networks:
-      - blog-net
-    ports:
-      - '8081:8080'
-    volumes:
-      - ./admin-cms-app/backend-node/:/app/:ro
-      - /app/node_modules
-      - ./open-api-contracts/api.yaml:/open-api-contracts/api.yaml:ro
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - CHOKIDAR_INTERVAL=100
-      - GIT_PROVIDER=local
-      - ASTRO_MANAGEMENT_URL=http://astro-server:4320
-    depends_on:
-      astro-server:
-        condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: ./admin-cms-app/backend-node/src
-          target: /app/src
-        - action: rebuild
-          path: ./admin-cms-app/backend-node/package.json
-
-    healthcheck:
-      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz' ]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-
-  frontend-svelte:
-    profiles: [ svelte ]
-    build:
-      context: ./admin-cms-app/frontend-svelte
+      context: ./frontend
       dockerfile: Dockerfile.dev
     networks:
       - blog-net
     ports:
       - '3000:3000'
     environment:
-      # Use the Rust server as backend for Svelte.
       - PUBLIC_API_BACKEND_URL=http://localhost:8080
-    volumes:
-      - ./admin-cms-app/frontend-svelte/bin:/app/bin:ro
     develop:
       watch:
         - action: sync
-          path: ./admin-cms-app/frontend-svelte/src
+          path: ./frontend/src
           target: /app/src
         - action: rebuild
-          path: ./admin-cms-app/frontend-svelte/package.json
-
+          path: ./frontend/package.json
     healthcheck:
       test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000' ]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-
-  frontend-react:
-    profiles: [ react ]
-    build:
-      context: ./admin-cms-app/frontend-react
-      dockerfile: Dockerfile.dev
-    networks:
-      - blog-net
-    ports:
-      - '3001:3001'
-    environment:
-      # Let's use the Node.js server as backend for React.
-      - VITE_API_BACKEND_URL=http://localhost:8081
-#      - CHOKIDAR_USEPOLLING=true
-#      - CHOKIDAR_INTERVAL=100
-    volumes:
-      - ./admin-cms-app/frontend-react/:/app/:ro
-      - /app/node_modules
-      - /app/.react-router
-    develop:
-      watch:
-        - action: sync
-          path: ./admin-cms-app/frontend-react/src
-          target: /app/src
-        - action: rebuild
-          path: ./admin-cms-app/frontend-react/package.json
-
-
-    healthcheck:
-      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001' ]
       interval: 5s
       timeout: 5s
       retries: 3

@@ -7,14 +7,14 @@ A headless CMS for managing Astro-based static sites.
 ```bash
 # Prerequisites: Docker + mise
 
-# Run all the servers together
+# Start all services
 mise run up
 
-# List all the tasks
+# List all tasks
 mise tasks
 
-# Run with SvelteKit + Rust (sweet spot) in watch mode
-mise run up-svelte-rust-watch
+# Start with file watching
+mise run up-watch
 
 # Access
 # Admin UI:  http://localhost:3000
@@ -33,8 +33,9 @@ An **Admin App** (frontend + backend) that controls an **Astro static site gener
 
 ## Tech Stack
 
-- **Frontends:** SvelteKit, React (DaisyUI)
-- **Backends:** Node.js/Fastify, Rust/Axum
+- **Frontend:** SvelteKit (shadcn/ui)
+- **Backend:** Rust/Axum
+- **Supervisor:** `astro-supervisor` Rust binary (WebSocket client, manages Astro lifecycle)
 - **Static Site:** Astro
 - **Containers:** Docker + Compose (Alpine Linux)
 - **API Contract:** OpenAPI 3.1

@@ -10,44 +10,20 @@ rust = "latest"
 # =============================================================================
 
 [tasks.up]
-description = "Start all services (both backends + svelte) for comparison"
-run = "docker compose --profile rust --profile node --profile svelte --profile react up --remove-orphans --build"
+description = "Start all services"
+run = "docker compose up --remove-orphans --build"
 
 [tasks.up-d]
 description = "Start all services detached"
-run = "docker compose --profile rust --profile node --profile svelte --profile react up --build --remove-orphans -d --wait"
+run = "docker compose up --build --remove-orphans -d --wait"
 
-[tasks.up-rust]
-description = "Start stack with Rust backend only"
-run = "docker compose --profile rust up --remove-orphans --build"
-
-[tasks.up-node]
-description = "Start stack with Node backend only"
-run = "docker compose --profile node up --remove-orphans --build --renew-anon-volumes"
-
-[tasks.up-svelte-rust]
-description = "Start SvelteKit + Rust backend (sweet spot combo)"
-run = "docker compose --profile rust --profile svelte up --remove-orphans --build"
-
-[tasks.up-svelte-rust-watch]
-description = "Start SvelteKit + Rust backend (sweet spot combo)"
-run = "docker compose --profile rust --profile svelte up --remove-orphans --build --renew-anon-volumes --watch"
-
-[tasks.up-svelte-rust-d]
-description = "Start SvelteKit + Rust backend detached"
-run = "docker compose --profile rust --profile svelte up --remove-orphans --build -d --wait"
-
-[tasks.up-react-node]
-description = "Start React + Node backend"
-run = "docker compose --profile node --profile react up --remove-orphans --build"
-
-[tasks.up-react-node-d]
-description = "Start React + Node backend detached"
-run = "docker compose --profile node --profile react up --remove-orphans --build -d --wait"
+[tasks.up-watch]
+description = "Start all services with file watching"
+run = "docker compose up --remove-orphans --build --renew-anon-volumes --watch"
 
 [tasks.down]
 description = "Stop and remove compose stack"
-run = "docker compose --profile rust --profile node --profile svelte --profile react down --remove-orphans --volumes"
+run = "docker compose down --remove-orphans --volumes"
 
 [tasks.logs]
 description = "Follow compose logs"
@@ -57,52 +33,39 @@ run = "docker compose logs -f"
 # Integration Tests (Playwright - runs outside compose)
 # =============================================================================
 
-[tasks.test-svelte-rust]
-description = "E2E test: Svelte + Rust (sweet spot) — servers start automatically"
+[tasks.test]
+description = "E2E integration tests — starts stack, runs Playwright, tears down"
 dir = "integration-tests"
-depends=["up-svelte-rust-d"]
+depends = ["up-d"]
 run = "pnpm run test"
-depends_post=["down"]
-
-[tasks.test-react-node]
-description = "E2E test: React + Node"
-dir = "integration-tests"
-depends=["up-react-node-d"]
-run = "FRONTEND_URL=http://localhost:3001 BACKEND_URL=http://localhost:8081 pnpm run test"
-depends_post=["down"]
-
-[tasks.test-all-combos]
-description = "E2E test all 4 frontend/backend combinations"
-depends = ["test-svelte-rust", "test-react-node"]
+depends_post = ["down"]
 
 # =============================================================================
 # Unit Tests (run outside compose, watch mode)
 # =============================================================================
 
-[tasks.test-unit-rust]
+[tasks.test-unit-backend]
 description = "Run Rust backend unit tests in watch mode"
-run = "cd admin-cms-app/backend-rust && cargo watch -x test"
+run = "cargo watch -x test"
+dir = "backend"
 
-[tasks.test-unit-node]
-description = "Run Node backend unit tests in watch mode"
-run = "cd admin-cms-app/backend-node && pnpm exec vitest --watch"
+[tasks.test-unit-supervisor]
+description = "Run astro-supervisor unit tests in watch mode"
+run = "cargo watch -x test"
+dir = "astro-supervisor"
 
-[tasks.test-unit-svelte]
-description = "Run SvelteKit frontend unit tests in watch mode"
-run = "cd admin-cms-app/frontend-svelte && pnpm exec vitest --watch"
-
-[tasks.test-unit-react]
-description = "Run React frontend unit tests in watch mode"
-run = "cd admin-cms-app/frontend-react && pnpm exec vitest --watch"
+[tasks.test-unit-frontend]
+description = "Run SvelteKit unit tests in watch mode"
+run = "pnpm exec vitest --watch"
+dir = "frontend"
 
 [tasks.test-unit]
-description = "Run all unit tests (parallel, not watch mode)"
+description = "Run all unit tests"
 run = """
 echo "=== Running all unit tests ===" && \
-(cd admin-cms-app/backend-rust && cargo test) && \
-(cd admin-cms-app/backend-node && pnpm exec vitest run) && \
-(cd admin-cms-app/frontend-svelte && pnpm exec vitest run) && \
-(cd admin-cms-app/frontend-react && pnpm exec vitest run) && \
+(cd backend && cargo test) && \
+(cd astro-supervisor && cargo test) && \
+(cd frontend && pnpm exec vitest run) && \
 echo "=== All unit tests passed ==="
 """
 
@@ -113,7 +76,7 @@ echo "=== All unit tests passed ==="
 [tasks.stats]
 description = "Show container resource usage"
 run = """
-echo "=== Image Sizes ===" && docker image ls --format "table {% raw %}{{.Repository}}\t{{.Size}}{% endraw %}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {% raw %}{{.Name}}\t{{.MemUsage}}{% endraw %}" 2>/dev/null || echo "No running containers"
+echo "=== Image Sizes ===" && docker image ls --format "table {{.Repository}}\t{{.Size}}" | grep -E "(backend|frontend|supervisor|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
 """
 
 # =============================================================================
@@ -121,12 +84,12 @@ echo "=== Image Sizes ===" && docker image ls --format "table {% raw %}{{.Reposi
 # =============================================================================
 
 [tasks.prod-up]
-description = "Start production stack (all services)"
-run = "docker compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react up --build"
+description = "Start production stack"
+run = "docker compose -f compose.prod.yaml up --build"
 
 [tasks.prod-down]
 description = "Stop production stack"
-run = "docker compose -f compose.prod.yaml --profile rust --profile node --profile svelte --profile react down"
+run = "docker compose -f compose.prod.yaml down"
 
 # =============================================================================
 # Local Dev Tasks
@@ -134,24 +97,20 @@ run = "docker compose -f compose.prod.yaml --profile rust --profile node --profi
 
 [tasks.format]
 description = "Format code in all services"
-run = "pnpm format && cd admin-cms-app/backend-rust && cargo fmt"
+run = "pnpm format && (cd backend && cargo fmt) && (cd astro-supervisor && cargo fmt)"
 
-[tasks.dev-rust]
+[tasks.dev-backend]
 description = "Start Rust backend locally (hot reload)"
-run = "cargo watch -x 'run --bin backend-rust'"
-dir = "admin-cms-app/backend-rust"
+run = "cargo watch -x 'run --bin blog-engine-api'"
+dir = "backend"
 
-[tasks.dev-gen-open-api]
-description= "Generate OpenAPI yaml from Rust backend"
-run = "cargo run --bin gen_open_api_yaml"
-dir = "admin-cms-app/backend-rust"
+[tasks.spec-gen]
+description = "Generate OpenAPI yaml from Rust backend"
+run = "cargo run --bin gen-open-api-yaml"
+dir = "backend"
 depends_post = ["format"]
 
-[tasks.dev-gen-api-clients]
-description = "Generate types and query from OpenAPI specification in the Svelte and React frontend"
-depends = ["dev-gen-open-api"]
-run = [
-    "pnpm --filter frontend-svelte run generate",
-    "pnpm --filter frontend-react run generate",
-    "pnpm --filter backend-node run generate"
-]
+[tasks.gen-api-clients]
+description = "Generate types and query clients from OpenAPI specification"
+depends = ["spec-gen"]
+run = "pnpm --filter frontend run generate"

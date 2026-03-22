@@ -125,19 +125,13 @@ astro-server:
 
 **`astro-server/Dockerfile`:** Add `EXPOSE 4321` alongside the existing `EXPOSE 4320`, to document that the container serves on both ports.
 
-### `admin-cms-app/backend-rust/src/lib.rs`
+### `backend/src/lib.rs`
 
 - `SiteData`: add `preview_url: Option<String>` with `#[serde(rename_all = "camelCase")]`.
 - New handler `preview_site(Path(slug), State(state))` → `POST /sites/:slug/preview`.
   - If the management API returns 404, the Rust handler must return 404 (not 500). Check `resp.status()` and forward 404 responses verbatim. Only return 500 for other non-OK statuses or network errors.
 - New handler `stop_preview(State(state))` → `DELETE /preview` (proxies to management API, returns 204).
 - Update `ApiDoc` OpenAPI registration.
-
-### `admin-cms-app/backend-node/src/handlers/sites.ts`
-
-- Add `preview_site` handler: calls `POST {ASTRO_MANAGEMENT_URL}/sites/:slug/preview`, wraps in envelope.
-  - The existing `create_site` handler collapses all non-OK upstream responses to 500. This handler must differ: if the management API returns 404, forward it as 404. Only return 500 for other non-OK statuses or network errors.
-- Add `stop_preview` handler: calls `DELETE {ASTRO_MANAGEMENT_URL}/preview`, returns 204.
 
 ### OpenAPI + generated clients
 

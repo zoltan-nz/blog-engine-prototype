@@ -1,5 +1,5 @@
 @./specs/0003-architecture-consolidation.md
-@./specs/0002-blog-engine-agent-design-spec.md
+@./specs/0004-websocket-agent-protocol.md
 
 # Blog Engine Prototype — AI Context
 
@@ -28,15 +28,17 @@ Headless CMS for managing Astro static sites.
 
 ## Tech Stack
 
-| Layer             | Technology                              |
-|-------------------|-----------------------------------------|
-| Task runner       | `mise`                                  |
-| Frontend          | SvelteKit                               |
-| Backend           | Rust/Axum                               |
-| Agent             | Rust/Axum (blog-engine-agent)           |
-| Integration tests | Playwright (run on host, not in Docker) |
-| Unit tests        | Vitest (JS/TS), cargo test (Rust)       |
-| Package manager   | pnpm                                    |
+| Layer             | Technology                                    |
+|-------------------|-----------------------------------------------|
+| Task runner       | `mise`                                        |
+| Frontend          | SvelteKit                                     |
+| UI components     | shadcn/ui (Svelte port)                       |
+| Backend           | Rust/Axum                                     |
+| Supervisor        | Rust/Axum (`astro-supervisor`, WebSocket client) |
+| Protocol types    | `admin-protocol` crate (shared Rust types)    |
+| Integration tests | Playwright (run on host, not in Docker)       |
+| Unit tests        | Vitest (JS/TS), cargo test (Rust)             |
+| Package manager   | pnpm                                          |
 
 ## Coding Standards
 
@@ -67,14 +69,16 @@ Headless CMS for managing Astro static sites.
 - **Environment parity:** one code path; local/prod differ only by config. `AUTH_PROVIDER=dev|github`,
   `GIT_PROVIDER=local|github`
 - **Session:** signed cookie (stateless), `tower-cookies` in Rust
-- **Spec flow:** `blog-engine-agent` generates `agent.yaml` → backends consume as clients; backends generate
-  `api.yaml` → frontends consume
+- **Spec flow:** backend generates `api.yaml` → frontend consumes as generated client. Supervisor communicates via
+  WebSocket protocol (spec 0004); shared types live in the `admin-protocol` crate. OpenAPI covers the CMS HTTP API only.
 
-## Current Work — Step 11: Blog Engine Agent + Create Site
+## Current Work — Step 11: Astro Supervisor + Create Site
 
 Steps 1–10 complete. Active work:
 
-- [ ] `blog-engine-agent` — Rust/Axum binary replacing `management-api.mjs` (see active spec above)
+- [ ] `astro-supervisor` — Rust binary replacing `management-api.mjs`; connects outbound to backend via WebSocket
+      (see spec 0004)
+- [ ] `admin-protocol` crate — shared `Command`/`Event`/`Envelope` types consumed by backend and supervisor
 - [ ] Auth with dev provider
 - [ ] Create site with local git provider
 - [ ] Astro preview

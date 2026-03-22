@@ -8,7 +8,7 @@
 ## Overview
 
 Spec 0003 Decision 2 documents the evolution path from the current HTTP REST interface
-(`blog-engine-agent`) to a persistent WebSocket channel. This spec defines the protocol,
+(`astro-supervisor`) to a persistent WebSocket channel. This spec defines the protocol,
 channel topology, and deployment adaptation. No implementation is scoped — this is the
 target design for deployment model B (cloud CMS ↔ remote agent).
 
@@ -32,7 +32,7 @@ dispatch layer changes.
 
 ## Shared Protocol Crate
 
-A standalone `cms-protocol` crate holds all shared types. The CMS backend, agent, CLI tool,
+A standalone `admin-protocol` crate holds all shared types. The CMS backend, agent, CLI tool,
 and Tauri desktop app depend on it. A new command variant is a compile error in every consumer
 until handled.
 
@@ -207,10 +207,10 @@ async fn agent_main_loop(config: AgentConfig) {
 
 Ordered steps from current Milestone 1 HTTP interface:
 
-1. Extract `Command` / `Event` / `Envelope` types into `cms-protocol` crate
+1. Extract `Command` / `Event` / `Envelope` types into `admin-protocol` crate
 2. Add `GET /api/agent/ws` endpoint to CMS backend — accepts agent registration, routes
    inbound events to `broadcast` sender
-3. Add WebSocket client loop to `blog-engine-agent` — connects outbound, receives
+3. Add WebSocket client loop to `astro-supervisor` — connects outbound, receives
    `Envelope<Command>`, dispatches to existing handlers, sends `Envelope<Event>` back
 4. Add `POST /api/commands` and `GET /api/events` (SSE) to CMS backend for CLI/browser
 5. Update SvelteKit frontend — replace fetch calls with WebSocket client; add xterm.js
