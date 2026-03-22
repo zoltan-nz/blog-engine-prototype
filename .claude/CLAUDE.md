@@ -1,3 +1,4 @@
+@./specs/0003-architecture-consolidation.md
 @./specs/0002-blog-engine-agent-design-spec.md
 
 # Blog Engine Prototype — AI Context
@@ -13,8 +14,7 @@ This is a learning environment.
 
 Headless CMS for managing Astro static sites.
 
-- **Sweet spot:** SvelteKit + Rust (prioritize this combination)
-- **2 combos must work:** Svelte+Rust, React+Node
+- **Single stack:** SvelteKit + Rust (React+Node experiment completed and archived — see spec 0003)
 - **Storage:** Filesystem and git repository as source of truth — no database
 - **Containers:** Docker + `docker compose`; Alpine base images (exception: Rust builder uses `rust:slim-trixie` for
   glibc compatibility)
@@ -31,8 +31,9 @@ Headless CMS for managing Astro static sites.
 | Layer             | Technology                              |
 |-------------------|-----------------------------------------|
 | Task runner       | `mise`                                  |
-| Frontends         | SvelteKit, React using shadcn/ui        |
-| Backends          | Rust/Axum, Node/Fastify/TypeScript      |
+| Frontend          | SvelteKit                               |
+| Backend           | Rust/Axum                               |
+| Agent             | Rust/Axum (blog-engine-agent)           |
 | Integration tests | Playwright (run on host, not in Docker) |
 | Unit tests        | Vitest (JS/TS), cargo test (Rust)       |
 | Package manager   | pnpm                                    |

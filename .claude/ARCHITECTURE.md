@@ -2,14 +2,15 @@
 
 ## System Overview
 
-Headless CMS (Admin App) controls Astro-based static sites. No database — Git is the source of truth. Every site is a Git repo, every content edit is a commit.
+Headless CMS (Admin App) controls Astro-based static sites. No database — Git is the source of truth. Every site is a
+Git repo, every content edit is a commit. Single stack: Rust/Axum backend + SvelteKit frontend.
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │              Admin App                               │
-│  Frontend (SvelteKit :3000 or React :3001)          │
+│  Frontend (SvelteKit :3000)                         │
 │      ↕  OpenAPI 3.1 + generated query clients       │
-│  Backend (Rust/Axum :8080 or Node/Fastify :8081)    │
+│  Backend (Rust/Axum :8080)                          │
 └───────────────────┬─────────────────────────────────┘
                     │ HTTP (internal network)
                     ▼
@@ -21,14 +22,30 @@ Headless CMS (Admin App) controls Astro-based static sites. No database — Git 
 └─────────────────────────────────────────────────────┘
 ```
 
+## Deployment Models
+
+### A. Same machine (current — Docker compose)
+
+CMS backend and agent run on the same host (or Docker network). Agent is an HTTP server; backend calls it via
+`ASTRO_MANAGEMENT_URL`. This is internal IPC, not a public API.
+
+### B. Remote (future — cloud CMS, local Astro)
+
+CMS runs in the cloud. Agent runs on the user's machine (where Node.js and the Astro project live). Agent initiates an
+outbound WebSocket connection to the CMS — works through NAT/firewall. Git is the content transport.
+
+```
+CMS Binary (cloud) ◄──WebSocket── Agent (user's machine)
+                                        │ filesystem
+                                   ~/my-astro-project/
+```
+
 ## Port Scheme
 
 | Service            | Port | Exposed |
 |--------------------|------|---------|
 | Rust backend       | 8080 | Yes     |
-| Node backend       | 8081 | Yes     |
 | SvelteKit frontend | 3000 | Yes     |
-| React frontend     | 3001 | Yes     |
 | Astro preview      | 4321 | Yes     |
 | Agent (internal)   | 4320 | No      |
 
@@ -54,13 +71,14 @@ backend-rust       →  open-api-contracts/api.yaml    →  frontends (clients)
 
 ## What's Built (Steps 1–10 Complete)
 
-- All 4 frontend/backend combos running in Docker with hot reload
-- `/healthz` endpoint with `{ data, meta }` envelope in both backends
+- Svelte + Rust stack running in Docker with hot reload
+- `/healthz` endpoint with `{ data, meta }` envelope
 - Swagger UI + raw spec at `/api-docs/openapi.json` (Rust)
-- Generated query clients in both frontends (svelte-query, react-query via orval)
+- Generated query clients in frontend (svelte-query via orval)
 - `management-api.mjs` — site listing, creation, preview start/stop (to be replaced by agent)
-- `mise spec-gen` pipeline: Rust → api.yaml → frontends
-- Playwright integration tests for all 4 combos
+- `mise spec-gen` pipeline: Rust → api.yaml → frontend
+- Playwright integration tests
+- React + Node combo also built (archived) — proved the OpenAPI contract works across stacks
 
 ## Step 11: Create Site (In Progress)
 
@@ -95,6 +113,10 @@ Full flow (same in every environment):
 | 2026-03-14 | Environment parity via providers | One code path; config-only differences |
 | 2026-03-16 | Agent as internal service | No envelope on internal APIs; raw domain types |
 | 2026-03-16 | `blog-engine-agent` standalone crate | Independent release cycle from CMS backend |
+| 2026-03-21 | Drop React + Node — single stack | Proved API contract works; 4× feature cost not justified |
+| 2026-03-21 | Agent scope: process management only | Content CRUD goes direct to filesystem, not through agent |
+| 2026-03-21 | Agent HTTP now, WebSocket future | HTTP routes map to WS commands; handler logic unchanged |
+| 2026-03-21 | Portable CMS binary (long-term) | `rust-embed` SPA + Axum API = single downloadable binary |
 
 ## Resource Benchmarks (Phase 0)
 
@@ -107,6 +129,9 @@ Rust: ~2× smaller image, ~35× less RAM.
 
 ## Future
 
+- **Portable CMS binary** — `rust-embed` to serve SPA from backend binary; single download
+- **WebSocket agent** — agent connects outbound to cloud CMS for remote deployment
+- **Content volumes** — mount `astro-sites` to CMS backend for direct content CRUD
 - **GitHub provider** — auth + git; API shape already exists from dev/local providers
 - **Content editing** — Markdown posts via admin UI, each edit = git commit
 - **Astro builds** — trigger `astro build` from admin; CI via `repository_dispatch`
