@@ -1,4 +1,4 @@
-use backend_rust::ApiDoc;
+use backend::handlers::apidoc::ApiDoc;
 use utoipa::OpenApi;
 
 fn main() {

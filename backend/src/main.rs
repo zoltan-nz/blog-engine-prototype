@@ -1,4 +1,10 @@
-use backend_rust::{ApiDoc, AppState};
+use backend::handlers::apidoc::ApiDoc;
+use backend::handlers::healthz::{__path_healthz, healthz};
+use backend::handlers::sites::{
+    __path_create_site, __path_list_sites, __path_preview_site, __path_stop_preview,
+    create_site, list_sites, preview_site, stop_preview,
+};
+use backend::state::AppState;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -15,15 +21,13 @@ async fn main() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "backend_rust=debug".into()),
+                .unwrap_or_else(|_| "backend=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-
-    let astro_management_url = std::env::var("ASTRO_MANAGEMENT_URL")
-        .unwrap_or_else(|_| "http://localhost:4320".to_string());
-
-    let state = Arc::new(AppState::new(astro_management_url));
+    let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
+    // tokio.spawn(command_processor(command_rx))
+    let state = Arc::new(AppState { command_tx });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -31,10 +35,10 @@ async fn main() {
         .allow_headers(Any);
 
     let (router, api) = OpenApiRouter::<Arc<AppState>>::with_openapi(ApiDoc::openapi())
-        .routes(routes!(backend_rust::healthz))
-        .routes(routes!(backend_rust::list_sites, backend_rust::create_site))
-        .routes(routes!(backend_rust::preview_site))
-        .routes(routes!(backend_rust::stop_preview))
+        .routes(routes!(healthz))
+        .routes(routes!(list_sites, create_site))
+        .routes(routes!(preview_site))
+        .routes(routes!(stop_preview))
         .split_for_parts();
 
     let app = router
