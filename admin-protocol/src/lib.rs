@@ -13,7 +13,7 @@ pub enum ErrorCode {
     SiteNotFound,
     BuildFailed,
     PreviewTimeout,
-    Internal
+    Internal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,11 +75,10 @@ pub enum Event {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Envelope<T> {
-    pub id: Uuid,
+    pub id: uuid::Uuid,
     pub correlation_id: Option<Uuid>,  // links response to request
     pub idempotency_key: Option<Uuid>, // client-generated; same across retries
     pub sequence: u64,                 // monotonic; used for replay-from detection
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub payload: T,
 }
-

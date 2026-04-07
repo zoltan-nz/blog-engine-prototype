@@ -3,7 +3,7 @@ use crate::MetaServerName;
 use crate::handlers::healthz::{__path_healthz, HealthData, HealthResponse, HealthStatus};
 use crate::handlers::sites::{
     __path_create_site, __path_list_sites, __path_preview_site, __path_stop_preview,
-    CreateSiteRequest, SiteData, SiteListResponse, SiteResponse
+    CreateSiteRequest, SiteData, SiteListResponse, SiteResponse,
 };
 use utoipa::OpenApi;
 

@@ -1,12 +1,15 @@
+use axum::routing::get;
 use backend::handlers::apidoc::ApiDoc;
 use backend::handlers::healthz::{__path_healthz, healthz};
 use backend::handlers::sites::{
-    __path_create_site, __path_list_sites, __path_preview_site, __path_stop_preview,
-    create_site, list_sites, preview_site, stop_preview,
+    __path_create_site, __path_list_sites, __path_preview_site, __path_stop_preview, create_site,
+    list_sites, preview_site, stop_preview,
 };
+use backend::handlers::supervisor::supervisor_ws;
 use backend::state::AppState;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
+use tokio::sync::{Mutex, broadcast};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
@@ -25,9 +28,15 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+    let (event_tx, _) = broadcast::channel(1000);
     let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
+    let command_rx = Mutex::new(Some(command_rx));
     // tokio.spawn(command_processor(command_rx))
-    let state = Arc::new(AppState { command_tx });
+    let state = Arc::new(AppState {
+        command_tx,
+        event_tx,
+        command_rx,
+    });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -42,6 +51,7 @@ async fn main() {
         .split_for_parts();
 
     let app = router
+        .route("/api/supervisor/ws", get(supervisor_ws))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
         .layer(cors)
         .with_state(state);

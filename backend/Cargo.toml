@@ -14,17 +14,21 @@ path = "src/bin/gen_open_api_yaml.rs"
 
 [dependencies]
 axum = { version = "0.8.8", features = ["ws"] }
-tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros", "rt", "sync"] }
+tokio = { version = "1.51.0", features = ["rt-multi-thread", "macros", "rt", "sync", "time"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["cors"] }
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-chrono = { version = "0.4.43", features = ["serde"] }
-uuid = { version = "1.21.0", features = ["v4"] }
-utoipa = {  version = "5.4.0", features = ["axum_extras", "auto_into_responses", "yaml"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+uuid = { version = "1.23.0", features = ["v4"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "auto_into_responses", "yaml"] }
 utoipa-axum = "0.2.0"
-utoipa-swagger-ui = {  version = "9.0.2", features = ["axum"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 admin-protocol = { path = "../admin-protocol" }
+futures-util = "0.3.32"
 
+[dev-dependencies]
+axum-test = { version = "20.0.0", features = ["ws"] }
+tokio = { version = "1.51.0", features = ["rt", "macros", "time"] }
