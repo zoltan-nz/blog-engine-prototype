@@ -28,6 +28,9 @@ utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 admin-protocol = { path = "../admin-protocol" }
 futures-util = "0.3.32"
+backon = "1.6.0"
+dotenvy = "0.15.7"
+envy = "0.4.2"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

@@ -1,23 +1,15 @@
 use crate::error::AgentError;
-use crate::handlers::Meta;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use utoipa::ToSchema;
 
 pub const MANIFEST_FILE_NAME: &str = "sites.json";
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SiteData {
     pub folder: String,
     pub name: String,
     pub git_url: String,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct ListSiteResponse {
-    data: Vec<SiteData>,
-    meta: Meta,
 }
 
 #[derive(Deserialize, Serialize)]
