@@ -1,14 +1,15 @@
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum LogStream {
     Stdout,
     Stderr,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum ErrorCode {
     SiteNotFound,
     BuildFailed,
@@ -16,7 +17,7 @@ pub enum ErrorCode {
     Internal,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
     CreateSite { name: String, domain: String },
@@ -27,7 +28,7 @@ pub enum Command {
     Ping,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type", content = "payload")]
 pub enum Event {
     SiteCreated {
@@ -73,8 +74,8 @@ pub enum Event {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Envelope<T> {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Envelope<T: ToSchema> {
     pub id: uuid::Uuid,
     pub correlation_id: Option<Uuid>,  // links response to request
     pub idempotency_key: Option<Uuid>, // client-generated; same across retries

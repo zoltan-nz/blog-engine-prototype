@@ -7,6 +7,10 @@ edition = "2024"
   name = "astro-supervisor"
   path = "src/main.rs"
 
+[lib]
+  name = "astro_supervisor"
+  path = "src/lib.rs"
+
 [dependencies]
 tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "process", "time", "net", "sync"] }
 serde = { version = "1.0.228", features = ["derive"]}

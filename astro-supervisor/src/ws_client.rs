@@ -9,7 +9,7 @@ use tokio_tungstenite::tungstenite::Message;
 use uuid::Uuid;
 
 pub async fn agent_main_loop(backend_url: String, state: Arc<AppState>) {
-    let run = || async { connect_and_run(&backend_url, &state).await };
+    let run = || async { connect_and_run(backend_url.clone(), state.clone()).await };
 
     run.retry(
         ExponentialBuilder::default()
@@ -25,8 +25,10 @@ pub async fn agent_main_loop(backend_url: String, state: Arc<AppState>) {
     .ok();
 }
 
-async fn connect_and_run(url: &str, state: &Arc<AppState>) -> anyhow::Result<()> {
-    let (ws_stream, _) = connect_async(url).await?;
+pub async fn connect_and_run(url: String, state: Arc<AppState>) -> anyhow::Result<()> {
+    let (ws_stream, _) = connect_async(&url).await?;
+    tracing::info!("connected to backend");
+
     let (mut write, mut read) = ws_stream.split();
 
     while let Some(msg) = read.next().await {
@@ -36,8 +38,11 @@ async fn connect_and_run(url: &str, state: &Arc<AppState>) -> anyhow::Result<()>
             _ => continue,
         };
         let envelope: Envelope<Command> = serde_json::from_str(&text)?;
+        tracing::debug!(command = ?envelope.payload, id = %envelope.id, "received command");
 
-        let event = dispatch_command(envelope.payload, state).await;
+        let event = dispatch_command(envelope.payload, &state).await;
+        tracing::debug!(event = ?event, "dispatched, sending reply");
+
         let reply = Envelope {
             id: Uuid::new_v4(),
             correlation_id: Some(envelope.id),
@@ -50,6 +55,7 @@ async fn connect_and_run(url: &str, state: &Arc<AppState>) -> anyhow::Result<()>
         write.send(Message::Text(json.into())).await?;
     }
 
+    tracing::info!("disconnected from backend cleanly");
     Ok(())
 }
 

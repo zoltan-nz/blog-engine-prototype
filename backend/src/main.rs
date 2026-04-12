@@ -1,5 +1,6 @@
 use axum::routing::get;
 use backend::handlers::apidoc::ApiDoc;
+use backend::handlers::commands::{__path_dispatch_command, dispatch_command};
 use backend::handlers::healthz::{__path_healthz, healthz};
 use backend::handlers::sites::{
     __path_create_site, __path_list_sites, __path_preview_site, __path_stop_preview, create_site,
@@ -48,6 +49,7 @@ async fn main() {
         .routes(routes!(list_sites, create_site))
         .routes(routes!(preview_site))
         .routes(routes!(stop_preview))
+        .routes(routes!(dispatch_command))
         .split_for_parts();
 
     let app = router

@@ -35,3 +35,4 @@ envy = "0.4.2"
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }
 tokio = { version = "1.51.0", features = ["rt", "macros", "time"] }
+astro-supervisor = { path = "../astro-supervisor" }

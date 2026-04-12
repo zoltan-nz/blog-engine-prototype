@@ -29,8 +29,14 @@ use uuid::Uuid;
 pub async fn supervisor_ws(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
     let rx = state.command_rx.lock().await.take();
     match rx {
-        None => StatusCode::CONFLICT.into_response(),
-        Some(rx) => ws.on_upgrade(move |socket| handle_supervisor_session(socket, rx, state)),
+        None => {
+            tracing::warn!("supervisor connection rejected — already connected");
+            StatusCode::CONFLICT.into_response()
+        }
+        Some(rx) => {
+            tracing::info!("supervisor connected");
+            ws.on_upgrade(move |socket| handle_supervisor_session(socket, rx, state))
+        }
     }
 }
 
@@ -45,6 +51,7 @@ async fn forward_command(
     let id = cmd_msg.envelope.id;
     let json =
         serde_json::to_string(&cmd_msg.envelope).expect("Failed to serialize command envelope");
+    tracing::debug!(command_id = %id, "forwarding command to supervisor");
     pending.insert(id, cmd_msg.response_tx);
     sender
         .send(Message::Text(Utf8Bytes::from(json)))
@@ -59,6 +66,7 @@ fn resolve_event(text: &str, pending: &mut Pending, event_tx: &broadcast::Sender
 
     if let Some(cid) = envelope.correlation_id {
         if let Some(tx) = pending.remove(&cid) {
+            tracing::debug!(correlation_id = %cid, "resolved pending command via oneshot");
             let _ = tx.send(envelope.payload.clone());
         }
     }
@@ -94,6 +102,7 @@ pub(crate) async fn handle_supervisor_session(
     mut command_rx: tokio::sync::mpsc::Receiver<CommandMessage>,
     state: Arc<AppState>,
 ) {
+    tracing::info!("supervisor session started");
     let (mut sender, mut receiver) = socket.split();
     let mut pending: HashMap<Uuid, oneshot::Sender<Event>> = HashMap::new();
 
@@ -115,6 +124,7 @@ pub(crate) async fn handle_supervisor_session(
         }
     }
 
+    tracing::warn!(pending = pending.len(), "supervisor session ended, draining pending commands");
     for (_, tx) in pending.drain() {
         let _ = tx.send(Event::Error {
             code: admin_protocol::ErrorCode::Internal,
