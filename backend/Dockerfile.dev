@@ -2,23 +2,26 @@ FROM rust:slim-trixie
 
 RUN apt-get update && apt-get install -y curl pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
-# Install cargo-watch for hot-reload
 RUN cargo install cargo-watch
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy manifests first for dependency caching
-COPY Cargo.toml Cargo.lock* ./
+# Copy shared crates — changes here bust dependency cache
+COPY admin-protocol/ admin-protocol/
+COPY astro-supervisor/Cargo.toml astro-supervisor/Cargo.lock* astro-supervisor/
 
-# Create dummy src to build dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release || true
-RUN rm -rf src
+COPY backend/Cargo.toml backend/Cargo.lock* backend/
 
-# Copy actual source
-COPY src ./src
+# Dummy src to pre-build dependencies
+RUN mkdir -p astro-supervisor/src && echo "fn main() {}" > astro-supervisor/src/main.rs && touch astro-supervisor/src/lib.rs
+RUN mkdir backend/src && echo "fn main() {}" > backend/src/main.rs
+RUN cd backend && cargo build || true
+RUN rm -rf backend/src astro-supervisor/src
+
+COPY backend/src backend/src
+
+WORKDIR /workspace/backend
 
 EXPOSE 8080
 
-# Hot-reload in development
-CMD cargo watch -x 'run --bin backend-rust'
+CMD cargo watch -x 'run --bin blog-engine-api'

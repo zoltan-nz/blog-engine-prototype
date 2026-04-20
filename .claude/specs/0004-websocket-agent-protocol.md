@@ -43,10 +43,10 @@ until handled.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
-    CreateSite { name: String, domain: String },
+    CreateSite { name: String, slug: String },
     BuildSite { site_id: Uuid, force: bool },
-    StartPreview { site_id: Uuid, port: Option<u16> },
-    StopPreview { site_id: Uuid },
+    StartPreview { slug: String, port: Option<u16> },
+    StopPreview,
     GetStatus { site_id: Uuid },
     Ping,
 }
@@ -60,8 +60,8 @@ pub enum Event {
     BuildLog { build_id: Uuid, stream: LogStream, data: String },
     BuildCompleted { build_id: Uuid, duration_ms: u64 },
     BuildFailed { build_id: Uuid, error: String, retryable: bool },
-    PreviewReady { site_id: Uuid, url: String, port: u16 },
-    PreviewStopped { site_id: Uuid },
+    PreviewReady { slug: String, url: String, port: u16 },
+    PreviewStopped,
     Pong,
     Error { code: ErrorCode, message: String, command_id: Option<Uuid> },
 }

@@ -1,3 +1,4 @@
+use crate::error::AgentError;
 use crate::state::AppState;
 use admin_protocol::{Command, Envelope, ErrorCode, Event};
 use backon::{ExponentialBuilder, Retryable};
@@ -62,16 +63,73 @@ pub async fn connect_and_run(url: String, state: Arc<AppState>) -> anyhow::Resul
 async fn dispatch_command(cmd: Command, state: &Arc<AppState>) -> Event {
     match cmd {
         Command::Ping => Event::Pong,
-        Command::CreateSite { name, domain: _domain } => Event::SiteCreated {
-            site_id: Uuid::new_v4(),
-            name,
-        },
-        Command::StartPreview { site_id, port } => Event::PreviewReady {
-            site_id,
-            url: format!("http://localhost:{}", port.unwrap_or(state.preview_port)),
-            port: port.unwrap_or(state.preview_port),
-        },
-        Command::StopPreview { site_id } => Event::PreviewStopped { site_id },
+        Command::CreateSite { name, slug } => {
+            match crate::handlers::sites::create_site(&state.sites_dir, &name, &slug) {
+                Err(AgentError::SiteAlreadyExists(_)) => Event::Error {
+                    code: ErrorCode::Conflict,
+                    message: format!("site '{slug}' already exists"),
+                    command_id: None,
+                },
+                Err(e) => Event::Error {
+                    code: ErrorCode::Internal,
+                    message: format!("{e}"),
+                    command_id: None,
+                },
+                Ok(site) => {
+                    let site_dir = state.sites_dir.join(&slug);
+                    if let Err(e) =
+                        crate::handlers::sites::scaffold_site(&site_dir).await
+                    {
+                        tracing::error!(slug = %slug, error = %e, "Astro scaffold failed");
+                        return Event::Error {
+                            code: ErrorCode::Internal,
+                            message: format!("scaffold failed: {e}"),
+                            command_id: None,
+                        };
+                    }
+                    Event::SiteCreated {
+                        site_id: Uuid::new_v4(),
+                        name: site.name,
+                    }
+                }
+            }
+        }
+        Command::StartPreview { slug, port } => {
+            let port = port.unwrap_or(state.preview_port);
+            match crate::handlers::preview::start_preview(state, &slug, port).await {
+                Ok(url) => Event::PreviewReady { slug, url, port },
+                Err(crate::error::AgentError::SiteNotFound(_)) => Event::Error {
+                    code: ErrorCode::SiteNotFound,
+                    message: format!("site '{slug}' not found"),
+                    command_id: None,
+                },
+                Err(crate::error::AgentError::PreviewAlreadyRunning(_)) => Event::Error {
+                    code: ErrorCode::Conflict,
+                    message: "preview already running".to_string(),
+                    command_id: None,
+                },
+                Err(crate::error::AgentError::DevServerTimeout(_)) => Event::Error {
+                    code: ErrorCode::PreviewTimeout,
+                    message: format!("dev server for '{slug}' timed out"),
+                    command_id: None,
+                },
+                Err(e) => Event::Error {
+                    code: ErrorCode::Internal,
+                    message: format!("{e}"),
+                    command_id: None,
+                },
+            }
+        }
+        Command::StopPreview => {
+            match crate::handlers::preview::stop_preview(state).await {
+                Ok(()) => Event::PreviewStopped,
+                Err(e) => Event::Error {
+                    code: ErrorCode::Internal,
+                    message: format!("{e}"),
+                    command_id: None,
+                },
+            }
+        }
         Command::GetStatus { site_id: _site_id } => Event::BuildProgress {
             build_id: Uuid::new_v4(),
             phase: "not implemented".into(),

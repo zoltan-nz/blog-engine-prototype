@@ -17,15 +17,16 @@ test.describe('Sites - API', () => {
   test('POST /sites creates a site and returns it with a git URL', async ({ request }) => {
     test.setTimeout(120_000); // npm create astro takes time
 
+    const slug = `api-test-${Date.now()}`;
     const response = await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'API Test Blog', slug: 'api-test-blog' },
+      data: { name: 'API Test Blog', slug },
     });
     expect(response.status()).toBe(201);
 
     const body = await response.json();
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('meta');
-    expect(body.data).toMatchObject({ name: 'API Test Blog', slug: 'api-test-blog' });
+    expect(body.data).toMatchObject({ name: 'API Test Blog', slug });
     expect(body.data).toHaveProperty('gitUrl');
   });
 

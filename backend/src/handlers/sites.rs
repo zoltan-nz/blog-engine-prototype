@@ -1,13 +1,17 @@
 use crate::Meta;
-use crate::state::AppState;
+use crate::state::{AppState, CommandMessage};
+use admin_protocol::{Command, ErrorCode, Event};
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::oneshot;
 use tracing::info;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// A single Astro site managed by the CMS.
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -58,6 +62,32 @@ impl SiteListResponse {
     }
 }
 
+/// Preview URL for an active dev server.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewData {
+    pub preview_url: String,
+}
+
+/// Response envelope for a preview start.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PreviewResponse {
+    data: PreviewData,
+    meta: Meta,
+}
+
+#[derive(Deserialize)]
+struct ManifestEntry {
+    folder: String,
+    name: String,
+    git_url: String,
+}
+
+#[derive(Deserialize)]
+struct SitesManifest {
+    sites: Vec<ManifestEntry>,
+}
+
 #[utoipa::path(
     get,
     path = "/sites",
@@ -65,9 +95,49 @@ impl SiteListResponse {
         (status = 200, description = "List of all sites", body = SiteListResponse)
     )
 )]
-pub async fn list_sites(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn list_sites(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     info!("List sites requested");
-    StatusCode::NOT_IMPLEMENTED
+
+    let manifest_path = state.sites_dir.join("sites.json");
+    if !manifest_path.exists() {
+        return Json(SiteListResponse::new(vec![])).into_response();
+    }
+
+    let content = match std::fs::read_to_string(&manifest_path) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to read sites manifest");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let manifest: SitesManifest = match serde_json::from_str(&content) {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to parse sites manifest");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let active = state.active_preview.lock().await.clone();
+    let sites = manifest
+        .sites
+        .into_iter()
+        .map(|e| {
+            let preview_url = active
+                .as_ref()
+                .filter(|(slug, _)| slug == &e.folder)
+                .map(|(_, url)| url.clone());
+            SiteData {
+                slug: e.folder,
+                name: e.name,
+                git_url: e.git_url,
+                preview_url,
+            }
+        })
+        .collect();
+
+    Json(SiteListResponse::new(sites)).into_response()
 }
 
 #[utoipa::path(
@@ -81,11 +151,41 @@ pub async fn list_sites(State(_state): State<Arc<AppState>>) -> impl IntoRespons
     )
 )]
 pub async fn create_site(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<CreateSiteRequest>,
 ) -> impl IntoResponse {
     info!(slug = %req.slug, "Create site requested");
-    StatusCode::NOT_IMPLEMENTED
+
+    let (response_tx, response_rx) = oneshot::channel::<Event>();
+    let envelope = admin_protocol::Envelope {
+        id: Uuid::new_v4(),
+        correlation_id: None,
+        idempotency_key: None,
+        sequence: 0,
+        timestamp: chrono::Utc::now(),
+        payload: Command::CreateSite { name: req.name.clone(), slug: req.slug.clone() },
+    };
+
+    if state.command_tx.send(CommandMessage { envelope, response_tx }).await.is_err() {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+
+    match tokio::time::timeout(Duration::from_secs(110), response_rx).await {
+        Ok(Ok(Event::SiteCreated { name, .. })) => (
+            StatusCode::CREATED,
+            Json(SiteResponse::new(SiteData {
+                slug: req.slug,
+                name,
+                git_url: "".into(),
+                preview_url: None,
+            })),
+        ).into_response(),
+        Ok(Ok(Event::Error { code: ErrorCode::Conflict, message, .. })) => {
+            (StatusCode::CONFLICT, message).into_response()
+        }
+        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
+    }
 }
 
 #[utoipa::path(
@@ -102,10 +202,50 @@ pub async fn create_site(
 )]
 pub async fn preview_site(
     Path(slug): Path<String>,
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     info!(slug = %slug, "Preview site requested");
-    StatusCode::NOT_IMPLEMENTED
+
+    let (response_tx, response_rx) = oneshot::channel::<Event>();
+    let envelope = admin_protocol::Envelope {
+        id: Uuid::new_v4(),
+        correlation_id: None,
+        idempotency_key: None,
+        sequence: 0,
+        timestamp: chrono::Utc::now(),
+        payload: Command::StartPreview { slug: slug.clone(), port: None },
+    };
+
+    if state
+        .command_tx
+        .send(CommandMessage { envelope, response_tx })
+        .await
+        .is_err()
+    {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+
+    match tokio::time::timeout(Duration::from_secs(60), response_rx).await {
+        Ok(Ok(Event::PreviewReady { url, .. })) => {
+            *state.active_preview.lock().await = Some((slug, url.clone()));
+            Json(PreviewResponse {
+                data: PreviewData { preview_url: url },
+                meta: Meta::default(),
+            })
+            .into_response()
+        }
+        Ok(Ok(Event::Error { code: ErrorCode::SiteNotFound, .. })) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Ok(Ok(Event::Error { code: ErrorCode::Conflict, .. })) => {
+            StatusCode::CONFLICT.into_response()
+        }
+        Ok(Ok(Event::Error { code: ErrorCode::PreviewTimeout, .. })) => {
+            StatusCode::GATEWAY_TIMEOUT.into_response()
+        }
+        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
+    }
 }
 
 #[utoipa::path(
@@ -115,9 +255,36 @@ pub async fn preview_site(
         (status = 204, description = "Preview stopped (or was not running)"),
     )
 )]
-pub async fn stop_preview(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn stop_preview(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     info!("Stop preview requested");
-    StatusCode::NOT_IMPLEMENTED
+
+    let (response_tx, response_rx) = oneshot::channel::<Event>();
+    let envelope = admin_protocol::Envelope {
+        id: Uuid::new_v4(),
+        correlation_id: None,
+        idempotency_key: None,
+        sequence: 0,
+        timestamp: chrono::Utc::now(),
+        payload: Command::StopPreview,
+    };
+
+    if state
+        .command_tx
+        .send(CommandMessage { envelope, response_tx })
+        .await
+        .is_err()
+    {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+
+    match tokio::time::timeout(Duration::from_secs(10), response_rx).await {
+        Ok(Ok(Event::PreviewStopped)) => {
+            *state.active_preview.lock().await = None;
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
+    }
 }
 
 #[cfg(test)]
@@ -191,5 +358,215 @@ mod tests {
         };
         let json = serde_json::to_value(&site).unwrap();
         assert_eq!(json["previewUrl"], "http://localhost:4321");
+    }
+
+    // --- create_site handler tests ---
+
+    use admin_protocol::Event;
+    use axum::Router;
+    use axum::routing::post;
+    use axum_test::{TestServer, Transport};
+    use tokio::sync::{Mutex, broadcast, mpsc};
+    use uuid::Uuid;
+
+    fn build_server(state: Arc<AppState>) -> TestServer {
+        let app = Router::new()
+            .route("/sites", post(create_site))
+            .with_state(state);
+        TestServer::builder()
+            .transport(Transport::HttpRandomPort)
+            .build(app)
+    }
+
+    #[tokio::test]
+    async fn create_site_returns_201_with_site_data() {
+        let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_server(state);
+
+        tokio::spawn(async move {
+            let msg = command_rx.recv().await.unwrap();
+            let _ = msg.response_tx.send(Event::SiteCreated {
+                site_id: Uuid::new_v4(),
+                name: "My Blog".into(),
+            });
+        });
+
+        let resp = server
+            .post("/sites")
+            .json(&serde_json::json!({ "name": "My Blog", "slug": "my-blog" }))
+            .await;
+
+        assert_eq!(resp.status_code(), StatusCode::CREATED);
+        let body: serde_json::Value = resp.json();
+        assert_eq!(body["data"]["slug"], "my-blog");
+        assert_eq!(body["data"]["name"], "My Blog");
+    }
+
+    #[tokio::test]
+    async fn create_site_returns_503_when_supervisor_not_connected() {
+        // command_tx with no active receiver — send will fail immediately
+        let (command_tx, command_rx) = mpsc::channel::<CommandMessage>(32);
+        drop(command_rx);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_server(state);
+
+        let resp = server
+            .post("/sites")
+            .json(&serde_json::json!({ "name": "My Blog", "slug": "my-blog" }))
+            .await;
+
+        assert_eq!(resp.status_code(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn create_site_returns_409_when_site_already_exists() {
+        let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_server(state);
+
+        tokio::spawn(async move {
+            let msg = command_rx.recv().await.unwrap();
+            let _ = msg.response_tx.send(Event::Error {
+                code: ErrorCode::Conflict,
+                message: "site 'my-blog' already exists".into(),
+                command_id: None,
+            });
+        });
+
+        let resp = server
+            .post("/sites")
+            .json(&serde_json::json!({ "name": "My Blog", "slug": "my-blog" }))
+            .await;
+
+        assert_eq!(resp.status_code(), StatusCode::CONFLICT);
+    }
+
+    // --- preview_site handler tests ---
+
+    fn build_preview_server(state: Arc<AppState>) -> TestServer {
+        use axum::routing::{delete, post};
+        let app = Router::new()
+            .route("/sites/{slug}/preview", post(preview_site))
+            .route("/preview", delete(stop_preview))
+            .with_state(state);
+        TestServer::builder()
+            .transport(Transport::HttpRandomPort)
+            .build(app)
+    }
+
+    #[tokio::test]
+    async fn preview_site_returns_200_with_preview_url() {
+        let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_preview_server(state);
+
+        tokio::spawn(async move {
+            let msg = command_rx.recv().await.unwrap();
+            let _ = msg.response_tx.send(Event::PreviewReady {
+                slug: "my-site".into(),
+                url: "http://localhost:4321".into(),
+                port: 4321,
+            });
+        });
+
+        let resp = server.post("/sites/my-site/preview").await;
+        assert_eq!(resp.status_code(), StatusCode::OK);
+        let body: serde_json::Value = resp.json();
+        assert_eq!(body["data"]["previewUrl"], "http://localhost:4321");
+    }
+
+    #[tokio::test]
+    async fn preview_site_returns_404_when_site_not_found() {
+        let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_preview_server(state);
+
+        tokio::spawn(async move {
+            let msg = command_rx.recv().await.unwrap();
+            let _ = msg.response_tx.send(Event::Error {
+                code: ErrorCode::SiteNotFound,
+                message: "site 'no-site' not found".into(),
+                command_id: None,
+            });
+        });
+
+        let resp = server.post("/sites/no-site/preview").await;
+        assert_eq!(resp.status_code(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn preview_site_returns_503_when_supervisor_disconnected() {
+        let (command_tx, command_rx) = mpsc::channel::<CommandMessage>(32);
+        drop(command_rx);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_preview_server(state);
+
+        let resp = server.post("/sites/my-site/preview").await;
+        assert_eq!(resp.status_code(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn stop_preview_returns_204() {
+        let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
+        let (event_tx, _) = broadcast::channel(1000);
+        let state = Arc::new(AppState {
+            command_tx,
+            event_tx,
+            command_rx: Mutex::new(None),
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: Mutex::new(None),
+        });
+        let server = build_preview_server(state);
+
+        tokio::spawn(async move {
+            let msg = command_rx.recv().await.unwrap();
+            let _ = msg.response_tx.send(Event::PreviewStopped);
+        });
+
+        let resp = server.delete("/preview").await;
+        assert_eq!(resp.status_code(), StatusCode::NO_CONTENT);
     }
 }

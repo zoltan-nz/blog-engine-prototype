@@ -18,6 +18,8 @@ fn build_backend_state() -> Arc<AppState> {
         command_tx,
         event_tx,
         command_rx: Mutex::new(Some(command_rx)),
+        sites_dir: std::path::PathBuf::from("/tmp"),
+        active_preview: Mutex::new(None),
     })
 }
 

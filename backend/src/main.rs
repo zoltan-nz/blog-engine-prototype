@@ -8,7 +8,9 @@ use backend::handlers::sites::{
 };
 use backend::handlers::supervisor::supervisor_ws;
 use backend::state::AppState;
+use serde::Deserialize;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{Mutex, broadcast};
 use tower_http::cors::{Any, CorsLayer};
@@ -20,6 +22,16 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use utoipa_swagger_ui::SwaggerUi;
 
+#[derive(Deserialize)]
+struct Config {
+    #[serde(default = "default_sites_dir")]
+    sites_dir: PathBuf,
+}
+
+fn default_sites_dir() -> PathBuf {
+    PathBuf::from("/tmp/astro-sites")
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
@@ -29,14 +41,19 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    dotenvy::dotenv().ok();
+    let config = envy::from_env::<Config>().expect("Failed to load configuration");
+
     let (event_tx, _) = broadcast::channel(1000);
     let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
     let command_rx = Mutex::new(Some(command_rx));
-    // tokio.spawn(command_processor(command_rx))
     let state = Arc::new(AppState {
         command_tx,
         event_tx,
         command_rx,
+        sites_dir: config.sites_dir,
+        active_preview: Mutex::new(None),
     });
 
     let cors = CorsLayer::new()

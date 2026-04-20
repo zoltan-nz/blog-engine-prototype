@@ -44,7 +44,7 @@ pub async fn dispatch_command(
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
 
-    match tokio::time::timeout(Duration::from_secs(30), response_rx).await {
+    match tokio::time::timeout(Duration::from_secs(1), response_rx).await {
         Ok(Ok(event)) => {
             tracing::info!(event = ?event, "command resolved");
             (StatusCode::OK, Json(event)).into_response()

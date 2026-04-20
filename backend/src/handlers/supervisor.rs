@@ -157,6 +157,8 @@ mod tests {
             command_tx,
             event_tx,
             command_rx,
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: tokio::sync::Mutex::new(None),
         });
 
         let app = Router::new()
@@ -185,6 +187,8 @@ mod tests {
             command_tx,
             event_tx,
             command_rx,
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: tokio::sync::Mutex::new(None),
         });
 
         let app = Router::new()
@@ -213,6 +217,8 @@ mod tests {
             command_tx: command_tx.clone(),
             event_tx,
             command_rx,
+            sites_dir: std::path::PathBuf::from("/tmp"),
+            active_preview: tokio::sync::Mutex::new(None),
         });
 
         let app = Router::new()

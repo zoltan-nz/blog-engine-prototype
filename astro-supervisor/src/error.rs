@@ -8,6 +8,9 @@ pub enum AgentError {
     #[error("Site '{0}' already exists")]
     SiteAlreadyExists(String),
 
+    #[error("Preview already running for site '{0}'")]
+    PreviewAlreadyRunning(String),
+
     #[error("Dev server timed out: {0}")]
     DevServerTimeout(String),
 

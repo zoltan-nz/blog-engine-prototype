@@ -164,13 +164,13 @@ tracing-test = "0.2"                                  # all crates with tracing
 - **Spec flow:** backend generates `api.yaml` → frontend consumes as generated client. Supervisor communicates via
   WebSocket protocol (spec 0004); shared types live in the `admin-protocol` crate. OpenAPI covers the CMS HTTP API only.
 
-## Current Work — Step 11: Astro Supervisor + Create Site
+## Current Work — Step 11: Astro Supervisor (in progress)
 
-Steps 1–10 complete. Active work:
+Steps 1–10 complete. Step 11 status:
 
-- [ ] `astro-supervisor` — Rust binary replacing `management-api.mjs`; connects outbound to backend via WebSocket
-  (see spec 0004)
-- [ ] `admin-protocol` crate — shared `Command`/`Event`/`Envelope` types consumed by backend and supervisor
+- [x] `astro-supervisor` — Rust binary; connects outbound to backend via WebSocket (spec 0004)
+- [x] `admin-protocol` crate — shared `Command`/`Event`/`Envelope` types
+- [x] Create site (manifest + scaffold via `create-astro` + `pnpm install`)
+- [x] Astro preview (`pnpm dev` lifecycle, `StartPreview`/`StopPreview` commands, 14/14 tests GREEN)
 - [ ] Auth with dev provider
 - [ ] Create site with local git provider
-- [ ] Astro preview

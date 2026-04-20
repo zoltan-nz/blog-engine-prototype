@@ -1,0 +1,43 @@
+FROM rust:slim-trixie
+
+RUN apt-get update && apt-get install -y curl pkg-config libssl-dev procps && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22 LTS
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pnpm and create-astro globally
+ENV PNPM_HOME=/usr/local/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+RUN npm install -g pnpm && pnpm add -g create-astro
+
+# Pre-warm the pnpm store with Astro dependencies.
+# Subsequent `pnpm install` calls in new sites just hard-link from the store (fast).
+RUN mkdir -p /tmp/astro-seed \
+    && create-astro /tmp/astro-seed --template minimal --no-git --yes --skip-houston \
+    && cd /tmp/astro-seed && pnpm install \
+    && rm -rf /tmp/astro-seed
+
+RUN cargo install cargo-watch
+
+WORKDIR /workspace
+
+COPY admin-protocol/ admin-protocol/
+
+COPY astro-supervisor/Cargo.toml astro-supervisor/Cargo.lock* astro-supervisor/
+
+RUN mkdir -p astro-supervisor/src && echo "fn main() {}" > astro-supervisor/src/main.rs
+RUN cd astro-supervisor && cargo build || true
+RUN rm -rf astro-supervisor/src
+
+COPY astro-supervisor/src astro-supervisor/src
+
+# Pre-compile the full binary so `cargo run` at container startup skips compilation entirely.
+# Without this, `cargo watch` runs `cargo run` which compiles from scratch (~45s),
+# causing Playwright tests to fire before the supervisor is ready.
+RUN cd astro-supervisor && cargo build
+
+WORKDIR /workspace/astro-supervisor
+
+CMD cargo watch -x 'run'

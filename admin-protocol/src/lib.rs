@@ -12,6 +12,7 @@ pub enum LogStream {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub enum ErrorCode {
     SiteNotFound,
+    Conflict,
     BuildFailed,
     PreviewTimeout,
     Internal,
@@ -20,10 +21,10 @@ pub enum ErrorCode {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
-    CreateSite { name: String, domain: String },
+    CreateSite { name: String, slug: String },
     BuildSite { site_id: Uuid, force: bool },
-    StartPreview { site_id: Uuid, port: Option<u16> },
-    StopPreview { site_id: Uuid },
+    StartPreview { slug: String, port: Option<u16> },
+    StopPreview,
     GetStatus { site_id: Uuid },
     Ping,
 }
@@ -59,13 +60,11 @@ pub enum Event {
         retryable: bool,
     },
     PreviewReady {
-        site_id: Uuid,
+        slug: String,
         url: String,
         port: u16,
     },
-    PreviewStopped {
-        site_id: Uuid,
-    },
+    PreviewStopped,
     Pong,
     Error {
         code: ErrorCode,
