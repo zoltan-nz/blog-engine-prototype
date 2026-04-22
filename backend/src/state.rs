@@ -9,7 +9,7 @@ pub struct CommandMessage {
 }
 
 pub struct AppState {
-    pub command_tx: Sender<CommandMessage>,
+    pub command_tx: Mutex<Sender<CommandMessage>>,
     pub event_tx: broadcast::Sender<Envelope<Event>>,
     pub command_rx: Mutex<Option<Receiver<CommandMessage>>>,
     pub sites_dir: PathBuf,

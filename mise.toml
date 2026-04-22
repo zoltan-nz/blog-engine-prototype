@@ -104,6 +104,11 @@ description = "Start Rust backend locally (hot reload)"
 run = "cargo watch -x 'run --bin blog-engine-api'"
 dir = "backend"
 
+[tasks.dev-supervisor]
+description = "Run astro-supervisor locally with cargo watch"
+dir = "astro-supervisor"
+run = "cargo watch -x 'run --bin astro-supervisor'"
+
 [tasks.spec-gen]
 description = "Generate OpenAPI yaml from Rust backend"
 run = "cargo run --bin gen-open-api-yaml"

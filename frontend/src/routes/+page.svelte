@@ -43,7 +43,7 @@
     await createSiteMutation.mutateAsync({ data: body });
 
     closeModal();
-    sitesQuery.refetch();
+    await sitesQuery.refetch();
   }
 
   async function handlePreview(slug: string) {

@@ -49,7 +49,7 @@ async fn main() {
     let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
     let command_rx = Mutex::new(Some(command_rx));
     let state = Arc::new(AppState {
-        command_tx,
+        command_tx: Mutex::new(command_tx),
         event_tx,
         command_rx,
         sites_dir: config.sites_dir,

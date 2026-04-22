@@ -36,6 +36,7 @@ pub async fn dispatch_command(
     tracing::info!(command = ?envelope.payload, id = %envelope.id, "dispatching command to supervisor");
 
     if state.command_tx
+        .lock().await
         .send(CommandMessage { envelope, response_tx})
         .await
         .is_err()

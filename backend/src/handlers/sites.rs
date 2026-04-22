@@ -166,7 +166,7 @@ pub async fn create_site(
         payload: Command::CreateSite { name: req.name.clone(), slug: req.slug.clone() },
     };
 
-    if state.command_tx.send(CommandMessage { envelope, response_tx }).await.is_err() {
+    if state.command_tx.lock().await.send(CommandMessage { envelope, response_tx }).await.is_err() {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
 
@@ -218,6 +218,7 @@ pub async fn preview_site(
 
     if state
         .command_tx
+        .lock().await
         .send(CommandMessage { envelope, response_tx })
         .await
         .is_err()
@@ -270,6 +271,7 @@ pub async fn stop_preview(State(state): State<Arc<AppState>>) -> impl IntoRespon
 
     if state
         .command_tx
+        .lock().await
         .send(CommandMessage { envelope, response_tx })
         .await
         .is_err()
@@ -383,7 +385,7 @@ mod tests {
         let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -417,7 +419,7 @@ mod tests {
         drop(command_rx);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -438,7 +440,7 @@ mod tests {
         let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -481,7 +483,7 @@ mod tests {
         let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -509,7 +511,7 @@ mod tests {
         let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -536,7 +538,7 @@ mod tests {
         drop(command_rx);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -553,7 +555,7 @@ mod tests {
         let (command_tx, mut command_rx) = mpsc::channel::<CommandMessage>(32);
         let (event_tx, _) = broadcast::channel(1000);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx: Mutex::new(None),
             sites_dir: std::path::PathBuf::from("/tmp"),

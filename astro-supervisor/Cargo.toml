@@ -4,16 +4,16 @@ version = "0.0.1"
 edition = "2024"
 
 [[bin]]
-  name = "astro-supervisor"
-  path = "src/main.rs"
+name = "astro-supervisor"
+path = "src/main.rs"
 
 [lib]
-  name = "astro_supervisor"
-  path = "src/lib.rs"
+name = "astro_supervisor"
+path = "src/lib.rs"
 
 [dependencies]
 tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros", "process", "time", "net", "sync"] }
-serde = { version = "1.0.228", features = ["derive"]}
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 anyhow = "1.0.102"
 thiserror = "2.0.18"
@@ -27,6 +27,7 @@ futures-util = "0.3.32"
 backon = "1.6.0"
 dotenvy = "0.15.7"
 envy = "0.4.2"
+which = "8.0.2"
 
 [dev-dependencies]
 tempfile = "3.27.0"

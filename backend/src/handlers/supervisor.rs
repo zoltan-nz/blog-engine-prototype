@@ -132,6 +132,11 @@ pub(crate) async fn handle_supervisor_session(
             command_id: None,
         });
     }
+
+    let (new_tx, new_rx) = tokio::sync::mpsc::channel(32);
+    *state.command_rx.lock().await = Some(new_rx);
+    *state.command_tx.lock().await = new_tx;
+    tracing::info!("command channel restored - supervisor can reconnect");
 }
 
 #[cfg(test)]
@@ -154,7 +159,7 @@ mod tests {
         let (command_tx, _) = tokio::sync::mpsc::channel(32);
         let command_rx: Mutex<Option<Receiver<CommandMessage>>> = Mutex::new(None);
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx,
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -184,7 +189,7 @@ mod tests {
         let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
         let command_rx: Mutex<Option<Receiver<CommandMessage>>> = Mutex::new(Some(command_rx));
         let state = Arc::new(AppState {
-            command_tx,
+            command_tx: Mutex::new(command_tx),
             event_tx,
             command_rx,
             sites_dir: std::path::PathBuf::from("/tmp"),
@@ -214,7 +219,7 @@ mod tests {
         let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
         let command_rx: Mutex<Option<Receiver<CommandMessage>>> = Mutex::new(Some(command_rx));
         let state = Arc::new(AppState {
-            command_tx: command_tx.clone(),
+            command_tx: Mutex::new(command_tx.clone()),
             event_tx,
             command_rx,
             sites_dir: std::path::PathBuf::from("/tmp"),
