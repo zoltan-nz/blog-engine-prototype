@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createHealthz } from "../../generated-api.js";
   import { backendURL } from "$lib/api/fetch-with-base-url.js";
+  import ThemeSelector from "./theme-selector/theme-selector.svelte";
+  import FontSelector from "./font-selector/font-selector.svelte";
 
   const checkConnection = createHealthz();
 </script>
@@ -10,6 +12,8 @@
   data-testid="footer"
 >
   <div class="mx-auto flex max-w-4xl items-center justify-between text-sm">
+    <ThemeSelector />
+    <FontSelector />
     <span class="text-base-content/60">Backend: {backendURL}</span>
     <span class="text-base-content/60"
       >Server Name: {checkConnection.data?.data.meta.serverName}</span
