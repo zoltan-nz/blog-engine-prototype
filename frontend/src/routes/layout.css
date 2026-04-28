@@ -1,13 +1,52 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-    themes: all;
-}
+@import "@skeletonlabs/skeleton";
+@import "@skeletonlabs/skeleton-svelte";
+
+/* All 22 preset themes */
+@import "@skeletonlabs/skeleton/themes/catppuccin";
+@import "@skeletonlabs/skeleton/themes/cerberus";
+@import "@skeletonlabs/skeleton/themes/concord";
+@import "@skeletonlabs/skeleton/themes/crimson";
+@import "@skeletonlabs/skeleton/themes/fennec";
+@import "@skeletonlabs/skeleton/themes/hamlindigo";
+@import "@skeletonlabs/skeleton/themes/legacy";
+@import "@skeletonlabs/skeleton/themes/mint";
+@import "@skeletonlabs/skeleton/themes/modern";
+@import "@skeletonlabs/skeleton/themes/mona";
+@import "@skeletonlabs/skeleton/themes/nosh";
+@import "@skeletonlabs/skeleton/themes/nouveau";
+@import "@skeletonlabs/skeleton/themes/pine";
+@import "@skeletonlabs/skeleton/themes/reign";
+@import "@skeletonlabs/skeleton/themes/rocket";
+@import "@skeletonlabs/skeleton/themes/rose";
+@import "@skeletonlabs/skeleton/themes/sahara";
+@import "@skeletonlabs/skeleton/themes/seafoam";
+@import "@skeletonlabs/skeleton/themes/terminus";
+@import "@skeletonlabs/skeleton/themes/vintage";
+@import "@skeletonlabs/skeleton/themes/vox";
+@import "@skeletonlabs/skeleton/themes/wintry";
+
+/* Replace Tailwind's built-in media-query dark variant with a data-mode selector.
+   Skeleton's globals.css uses @variant dark to set color-scheme, which drives
+   the light-dark() function inside all color pairing classes (bg-surface-200-800).
+   JS is responsible for keeping data-mode in sync when mode === 'system'. */
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+
+@plugin "@tailwindcss/forms";
 
 @layer base {
   :root {
-    font-family: var(--font-family, "Inter", sans-serif);
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  /* Skeleton sets body { font-family: var(--base-font-family) } in its own @layer base.
+     This rule comes later in source order so it wins, letting the user's font choice apply. */
+  body {
+    font-family:
+      var(--font-family, var(--base-font-family, system-ui)), sans-serif;
+    letter-spacing: var(--letter-spacing, 0);
   }
 }

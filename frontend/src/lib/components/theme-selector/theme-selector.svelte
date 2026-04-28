@@ -1,51 +1,117 @@
 <script lang="ts">
-  import { themeNames } from './theme-names.ts';
+  import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
+  import {
+    themeFontFamilyMap,
+    type ThemeName,
+    themeNames,
+  } from "./theme-names.ts";
+  import { fontStore } from "$lib/state/font.svelte";
+  import ColorSwatch from "./color-swatch.svelte";
+  import { ChevronDownIcon, Check } from "@lucide/svelte";
 
-  let selectedTheme = $state(localStorage.getItem('theme') ?? '');
+  type Mode = "system" | "light" | "dark";
 
-  const changeTheme = (themeName: string): void => {
-    document.documentElement.setAttribute('data-theme', themeName);
-    localStorage.setItem('theme', themeName);
-    selectedTheme = themeName;
-  };
+  let selectedTheme = $state<ThemeName>(
+    (localStorage.getItem("theme") as ThemeName) ?? "cerberus",
+  );
+  let mode = $state<Mode>((localStorage.getItem("mode") as Mode) ?? "system");
+
+  // Keep data-mode in sync when OS preference changes (system mode only)
+  $effect(() => {
+    if (mode !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = (e: MediaQueryListEvent) => {
+      document.documentElement.setAttribute(
+        "data-mode",
+        e.matches ? "dark" : "light",
+      );
+    };
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  });
+
+  function changeTheme(theme: ThemeName): void {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    selectedTheme = theme;
+    fontStore.applyByFamily(themeFontFamilyMap[theme]);
+  }
+
+  function setMode(m: Mode): void {
+    mode = m;
+    localStorage.setItem("mode", m);
+
+    switch (m) {
+      case "dark":
+        document.documentElement.setAttribute("data-mode", "dark");
+        break;
+      case "light":
+        document.documentElement.setAttribute("data-mode", "light");
+        break;
+      case "system":
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        document.documentElement.setAttribute(
+          "data-mode",
+          prefersDark ? "dark" : "light",
+        );
+        break;
+    }
+  }
 </script>
 
-<div title="Change Theme" class="dropdown dropdown-top">
-  <div tabindex="0" role="button" class="btn group btn-sm gap-1.5 px-1.5 btn-ghost" aria-label="Change Theme">
-    <div
-      class="bg-base-100 group-hover:border-base-content/20 border-base-content/10 grid shrink-0 grid-cols-2 gap-0.5 rounded-md border p-1 transition-colors">
-      <div class="bg-base-content size-1 rounded-full"></div>
-      <div class="bg-primary size-1 rounded-full"></div>
-      <div class="bg-secondary size-1 rounded-full"></div>
-      <div class="bg-accent size-1 rounded-full"></div>
-    </div>
-    <span class="hidden text-xs sm:inline">Theme</span>
-    <svg width="12px" height="12px" class="mt-px hidden size-2 fill-current opacity-60 sm:inline-block"
-         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048">
-      <path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path>
-    </svg>
-  </div>
-  <div tabindex="-1"
-       class="dropdown-content bg-base-200 text-base-content rounded-box h-[30.5rem] max-h-[calc(100vh-8.6rem)] overflow-y-auto border-[length:var(--border)] border-white/5 shadow-2xl outline-[length:var(--border)] outline-black/5">
-    <ul tabindex="-1" class="menu w-56">
-      <li tabindex="-1" class="menu-title text-xs">Theme</li>
-      {#each themeNames as theme}
-        <li>
-          <button class="gap-3 px-2" onclick={() => changeTheme(theme)}>
-            <div data-theme={theme} class="bg-base-100 grid shrink-0 grid-cols-2 gap-0.5 rounded-md p-1 shadow-sm">
-              <div class="bg-base-content size-1 rounded-full"></div>
-              <div class="bg-primary size-1 rounded-full"></div>
-              <div class="bg-secondary size-1 rounded-full"></div>
-              <div class="bg-accent size-1 rounded-full"></div>
-            </div>
-            <div class="w-32 truncate">{theme}</div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-                 class="h-3 w-3 shrink-0 {selectedTheme === theme ? 'visible' : 'invisible'}">
-              <path d="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z"></path>
-            </svg>
-          </button>
-        </li>
-      {/each}
-    </ul>
-  </div>
-</div>
+<Popover>
+  <Popover.Trigger
+    class="btn flex items-center gap-2 preset-tonal-surface btn-sm"
+  >
+    <ColorSwatch themeName={selectedTheme} />
+    <span class="hidden text-xs capitalize sm:inline">{selectedTheme}</span>
+    <ChevronDownIcon class="size-4 opacity-60" />
+  </Popover.Trigger>
+  <Portal>
+    <Popover.Positioner>
+      <Popover.Content
+        class="z-50 w-56 overflow-hidden card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-xl"
+      >
+        <!-- Theme list -->
+        <ul class="max-h-64 overflow-y-auto p-1">
+          {#each themeNames as theme}
+            <li>
+              <button
+                class="flex w-full items-center gap-3 rounded px-2 py-1.5 text-xs capitalize transition-colors hover:preset-tonal-surface"
+                class:preset-tonal-primary={selectedTheme === theme}
+                onclick={() => changeTheme(theme)}
+                role="option"
+                aria-selected={selectedTheme === theme}
+              >
+                <ColorSwatch themeName={theme} />
+                <span class="flex-1 text-left">{theme}</span>
+                {#if selectedTheme === theme}
+                  <Check class="size-4 shrink-0" />
+                {/if}
+              </button>
+            </li>
+          {/each}
+        </ul>
+
+        <!-- Mode toggle -->
+        <div class="border-t border-surface-200-800 p-2">
+          <p class="mb-1.5 px-1 text-xs text-surface-600-400">Mode</p>
+          <div class="grid grid-cols-3 gap-1">
+            {#each ["system", "light", "dark"] as const as m}
+              <button
+                class="btn btn-sm text-xs capitalize transition-colors"
+                class:preset-filled-primary-500={mode === m}
+                class:preset-tonal-surface={mode !== m}
+                onclick={() => setMode(m)}
+              >
+                {m}
+              </button>
+            {/each}
+          </div>
+        </div>
+      </Popover.Content>
+    </Popover.Positioner>
+  </Portal>
+</Popover>

@@ -52,7 +52,7 @@ Headless CMS for managing Astro static sites.
 |-------------------|--------------------------------------------------|
 | Task runner       | `mise`                                           |
 | Frontend          | SvelteKit                                        |
-| UI components     | shadcn/ui (Svelte port)                          |
+| UI components     | Skeleton v4 + Tailwind v4                        |
 | Backend           | Rust/Axum                                        |
 | Supervisor        | Rust/Axum (`astro-supervisor`, WebSocket client) |
 | Protocol types    | `admin-protocol` crate (shared Rust types)       |

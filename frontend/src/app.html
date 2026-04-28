@@ -1,14 +1,54 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="cerberus">
   <head>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin="anonymous"
+    />
     <script>
-      const t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);
-      const f=localStorage.getItem('font-family');if(f)document.documentElement.style.setProperty('--font-family','"'+f+'",sans-serif');
-      const fu=localStorage.getItem('font-url');if(fu){const l=document.createElement('link');l.rel='stylesheet';l.href=fu;document.head.appendChild(l);}
+      const t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+      const m = localStorage.getItem("mode") || "system";
+      if (m === "dark") {
+        document.documentElement.setAttribute("data-mode", "dark");
+      } else if (m === "light") {
+        document.documentElement.setAttribute("data-mode", "light");
+      } else {
+        document.documentElement.setAttribute(
+          "data-mode",
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light",
+        );
+      }
+      const fcs = localStorage.getItem("font-css-stack");
+      const ff = localStorage.getItem("font-family");
+      if (fcs) {
+        document.documentElement.style.setProperty("--font-family", fcs);
+      } else if (ff) {
+        document.documentElement.style.setProperty(
+          "--font-family",
+          '"' + ff + '",sans-serif',
+        );
+      }
+      const fls = localStorage.getItem("font-letter-spacing");
+      if (fls) {
+        document.documentElement.style.setProperty("--letter-spacing", fls);
+      }
+      const fu = localStorage.getItem("font-url");
+      if (fu) {
+        const l = document.createElement("link");
+        l.rel = "stylesheet";
+        l.href = fu;
+        document.head.appendChild(l);
+      }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+      rel="stylesheet"
+    />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     %sveltekit.head%

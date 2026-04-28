@@ -60,12 +60,12 @@ paths:
       tags: []
       operationId: preview_site
       parameters:
-      - name: slug
-        in: path
-        description: Site slug
-        required: true
-        schema:
-          type: string
+        - name: slug
+          in: path
+          description: Site slug
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Dev server started
@@ -83,8 +83,8 @@ components:
       type: object
       description: Request body for creating a new site.
       required:
-      - name
-      - slug
+        - name
+        - slug
       properties:
         name:
           type: string
@@ -93,8 +93,8 @@ components:
     HealthData:
       type: object
       required:
-      - status
-      - version
+        - status
+        - version
       properties:
         status:
           $ref: '#/components/schemas/HealthStatus'
@@ -104,8 +104,8 @@ components:
       type: object
       description: Response envelope for the health endpoint.
       required:
-      - data
-      - meta
+        - data
+        - meta
       properties:
         data:
           $ref: '#/components/schemas/HealthData'
@@ -114,14 +114,14 @@ components:
     HealthStatus:
       type: string
       enum:
-      - healthy
+        - healthy
     Meta:
       type: object
       required:
-      - timestamp
-      - requestId
-      - version
-      - serverName
+        - timestamp
+        - requestId
+        - version
+        - serverName
       properties:
         requestId:
           type: string
@@ -134,14 +134,14 @@ components:
     MetaServerName:
       type: string
       enum:
-      - backend
+        - backend
     SiteData:
       type: object
       description: A single Astro site managed by the CMS.
       required:
-      - slug
-      - name
-      - gitUrl
+        - slug
+        - name
+        - gitUrl
       properties:
         gitUrl:
           type: string
@@ -149,16 +149,16 @@ components:
           type: string
         previewUrl:
           type:
-          - string
-          - 'null'
+            - string
+            - 'null'
         slug:
           type: string
     SiteListResponse:
       type: object
       description: Response envelope for a list of sites.
       required:
-      - data
-      - meta
+        - data
+        - meta
       properties:
         data:
           type: array
@@ -170,8 +170,8 @@ components:
       type: object
       description: Response envelope for a single site.
       required:
-      - data
-      - meta
+        - data
+        - meta
       properties:
         data:
           $ref: '#/components/schemas/SiteData'

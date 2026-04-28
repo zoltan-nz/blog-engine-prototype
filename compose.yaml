@@ -10,6 +10,7 @@ volumes:
 
 services:
   astro-supervisor:
+    pull_policy: always
     build:
       context: .
       dockerfile: astro-supervisor/Dockerfile.dev
@@ -29,13 +30,14 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'pgrep -f astro-supervisor > /dev/null || exit 1' ]
+      test: ['CMD-SHELL', 'pgrep -f astro-supervisor > /dev/null || exit 1']
       interval: 2s
       timeout: 5s
       retries: 30
       start_period: 5s
 
   backend:
+    pull_policy: always
     build:
       context: .
       dockerfile: backend/Dockerfile.dev
@@ -57,12 +59,13 @@ services:
         - action: rebuild
           path: backend/Cargo.lock
     healthcheck:
-      test: [ 'CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1' ]
+      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8080/healthz || exit 1']
       interval: 5s
       timeout: 120s
       retries: 5
 
   frontend:
+    pull_policy: always
     build:
       context: frontend
       dockerfile: Dockerfile.dev
@@ -80,7 +83,7 @@ services:
         - action: rebuild
           path: frontend/package.json
     healthcheck:
-      test: [ 'CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000' ]
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000']
       interval: 5s
       timeout: 5s
       retries: 3
