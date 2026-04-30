@@ -15,7 +15,7 @@ fn build_backend_state() -> Arc<AppState> {
     let (command_tx, command_rx) = tokio::sync::mpsc::channel(32);
     let (event_tx, _) = broadcast::channel(1000);
     Arc::new(AppState {
-        command_tx,
+        command_tx: Mutex::new(command_tx),
         event_tx,
         command_rx: Mutex::new(Some(command_rx)),
         sites_dir: std::path::PathBuf::from("/tmp"),
@@ -51,10 +51,7 @@ async fn e2e_ping_pong() {
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // POST a Ping through the backend HTTP endpoint and assert we get Pong back
-    let response = server
-        .post("/api/commands")
-        .json(&Command::Ping)
-        .await;
+    let response = server.post("/api/commands").json(&Command::Ping).await;
 
     assert_eq!(response.status_code(), axum::http::StatusCode::OK);
     let event: Event = response.json();
