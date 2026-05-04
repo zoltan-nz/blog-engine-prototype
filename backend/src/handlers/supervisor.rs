@@ -124,7 +124,10 @@ pub(crate) async fn handle_supervisor_session(
         }
     }
 
-    tracing::warn!(pending = pending.len(), "supervisor session ended, draining pending commands");
+    tracing::warn!(
+        pending = pending.len(),
+        "supervisor session ended, draining pending commands"
+    );
     for (_, tx) in pending.drain() {
         let _ = tx.send(Event::Error {
             code: admin_protocol::ErrorCode::Internal,
@@ -223,7 +226,7 @@ mod tests {
             event_tx,
             command_rx,
             sites_dir: std::path::PathBuf::from("/tmp"),
-            active_preview: tokio::sync::Mutex::new(None),
+            active_preview: Mutex::new(None),
         });
 
         let app = Router::new()

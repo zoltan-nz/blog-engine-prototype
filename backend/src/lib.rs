@@ -2,6 +2,10 @@
 
 pub mod handlers;
 pub mod state;
+pub mod routes;
+pub mod telemetry;
+pub mod config;
+pub mod app;
 
 use serde::Serialize;
 use utoipa::ToSchema;
