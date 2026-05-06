@@ -185,7 +185,7 @@ The supervisor shells out to the same tools as the `.mjs`, with exact flags pres
 ## Docker Build
 
 Multi-stage build. Builder uses `rust:slim-trixie` (Debian slim) rather than `rust:alpine` due to better C library
-compatibility for the `openssl`/`pkg-config` deps. Final image stays `node:25-alpine`.
+compatibility for the `openssl`/`pkg-config` deps. Final image stays `node:26-alpine`.
 
 Dependency caching via dummy `main.rs` pattern (mirrors `backend/Dockerfile.dev`):
 
@@ -198,7 +198,7 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release && r
 COPY src ./src
 RUN cargo build --release --locked
 
-FROM node:25-alpine
+FROM node:26-alpine
 RUN apk add --no-cache git && npm install -g pnpm
 WORKDIR /app
 RUN mkdir -p /app/astro-sites /app/git-repos

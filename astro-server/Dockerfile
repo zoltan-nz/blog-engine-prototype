@@ -1,4 +1,4 @@
-FROM node:25-alpine
+FROM node:26-alpine
 
 RUN npm config set fund false && npm upgrade -g npm && npm install -g pnpm && pnpm --version
 
