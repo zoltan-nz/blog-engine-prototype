@@ -1,3 +1,4 @@
+#![allow(clippy::needless_for_each)]
 use crate::Meta;
 use crate::MetaServerName;
 use crate::handlers::healthz::{__path_healthz, HealthData, HealthResponse, HealthStatus};

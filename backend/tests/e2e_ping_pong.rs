@@ -25,7 +25,7 @@ fn build_backend_state() -> Arc<AppState> {
 
 fn build_backend_server(state: Arc<AppState>) -> TestServer {
     let app = Router::new()
-        .route("/api/supervisor/ws", get(supervisor_ws))
+        .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
         .route("/api/commands", post(dispatch_command))
         .with_state(state);
     TestServer::builder()
@@ -36,21 +36,24 @@ fn build_backend_server(state: Arc<AppState>) -> TestServer {
 #[tokio::test]
 async fn e2e_ping_pong() {
     let state = build_backend_state();
-    let server = build_backend_server(state);
+    let server = build_backend_server(state.clone());
 
-    // Build the ws:// URL the supervisor will connect to
     let mut ws_url = server.server_address().expect("server has no address");
     ws_url.set_scheme("ws").expect("url scheme change failed");
     ws_url.set_path("/api/supervisor/ws");
 
-    // Spawn the supervisor client loop — mirrors what main() does
     let supervisor_state = Arc::new(SupervisorState::new("/tmp/sites", "/tmp/repos", 4321));
     tokio::spawn(connect_and_run(ws_url.to_string(), supervisor_state));
 
-    // Give the WebSocket handshake time to complete
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // Poll until the supervisor has claimed command_rx (i.e. connected), then send.
+    // The h2c handshake requires more round trips than HTTP/1.1 WS so a fixed sleep is fragile.
+    for _ in 0..40 {
+        tokio::time::sleep(Duration::from_millis(25)).await;
+        if state.command_rx.lock().await.is_none() {
+            break;
+        }
+    }
 
-    // POST a Ping through the backend HTTP endpoint and assert we get Pong back
     let response = server.post("/api/commands").json(&Command::Ping).await;
 
     assert_eq!(response.status_code(), axum::http::StatusCode::OK);

@@ -176,14 +176,14 @@ pub async fn create_site(
             Json(SiteResponse::new(SiteData {
                 slug: req.slug,
                 name,
-                git_url: "".into(),
+                git_url: String::new(),
                 preview_url: None,
             })),
         ).into_response(),
         Ok(Ok(Event::Error { code: ErrorCode::Conflict, message, .. })) => {
             (StatusCode::CONFLICT, message).into_response()
         }
-        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
     }
 }
@@ -226,7 +226,7 @@ pub async fn preview_site(
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
 
-    match tokio::time::timeout(Duration::from_secs(60), response_rx).await {
+    match tokio::time::timeout(Duration::from_mins(1), response_rx).await {
         Ok(Ok(Event::PreviewReady { url, .. })) => {
             *state.active_preview.lock().await = Some((slug, url.clone()));
             Json(PreviewResponse {
@@ -244,7 +244,7 @@ pub async fn preview_site(
         Ok(Ok(Event::Error { code: ErrorCode::PreviewTimeout, .. })) => {
             StatusCode::GATEWAY_TIMEOUT.into_response()
         }
-        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
     }
 }
@@ -284,7 +284,7 @@ pub async fn stop_preview(State(state): State<Arc<AppState>>) -> impl IntoRespon
             *state.active_preview.lock().await = None;
             StatusCode::NO_CONTENT.into_response()
         }
-        Ok(Ok(_)) | Ok(Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
     }
 }

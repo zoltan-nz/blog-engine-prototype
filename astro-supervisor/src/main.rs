@@ -6,9 +6,7 @@ mod telemetry;
 mod ws_client;
 
 use std::fs::create_dir_all;
-use std::process::ExitStatus;
 use std::sync::Arc;
-use tokio::io;
 use tracing::error;
 use crate::config::Config;
 use crate::state::AppState;
@@ -31,13 +29,10 @@ async fn main() {
     ws_client::agent_main_loop(config.backend_ws_url, state).await;
 }
 
-fn check_required_command_exist(name: &str, install_hint: &str) -> () {
-    match which::which(name) {
-        Err(_) => {
-            error!("Required command not found: {}", name);
-            error!("Hint: {}", install_hint);
-            std::process::exit(1)
-        }
-        Ok(_) => (),
+fn check_required_command_exist(name: &str, install_hint: &str) {
+    if which::which(name).is_err() {
+        error!("Required command not found: {}", name);
+        error!("Hint: {}", install_hint);
+        std::process::exit(1)
     }
 }

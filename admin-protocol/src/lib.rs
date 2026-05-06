@@ -74,7 +74,8 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct Envelope<T: ToSchema> {
+#[allow(clippy::option_if_let_else)]
+pub struct Envelope<T> {
     pub id: uuid::Uuid,
     pub correlation_id: Option<Uuid>,  // links response to request
     pub idempotency_key: Option<Uuid>, // client-generated; same across retries

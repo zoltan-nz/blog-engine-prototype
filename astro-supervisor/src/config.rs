@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct Config {
     pub backend_ws_url: String,

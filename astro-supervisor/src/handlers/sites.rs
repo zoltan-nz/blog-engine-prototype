@@ -5,7 +5,7 @@ use std::path::Path;
 
 pub const MANIFEST_FILE_NAME: &str = "sites.json";
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct SiteData {
     pub folder: String,
     pub name: String,
@@ -77,7 +77,7 @@ pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData,
     let manifest_path = sites_dir.join(MANIFEST_FILE_NAME);
     let content = fs::read_to_string(&manifest_path)?;
     let mut manifest: SitesManifest = serde_json::from_str(&content)?;
-    let site = SiteData { folder: slug.into(), name: name.into(), git_url: "".into() };
+    let site = SiteData { folder: slug.into(), name: name.into(), git_url: String::new() };
     manifest.sites.push(site.clone());
     fs::write(&manifest_path, serde_json::to_string(&manifest)?)?;
 

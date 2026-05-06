@@ -12,6 +12,7 @@ fn default_sites_dir() -> PathBuf {
 }
 
 impl Config {
+    #[allow(clippy::missing_errors_doc)]
     pub fn from_env() -> Result<Self, envy::Error> {
         dotenvy::dotenv().ok();
         envy::from_env()

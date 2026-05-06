@@ -12,7 +12,7 @@ async fn main() {
 
     let (app, _state) = create_app(config);
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080);
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 8080);
     info!(%addr, "Server listening");
 
     let listener = tokio::net::TcpListener::bind(addr)

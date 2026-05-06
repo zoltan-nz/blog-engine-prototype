@@ -28,5 +28,5 @@ pub fn create_openapi_routes() -> Router<Arc<AppState>> {
 }
 
 pub fn create_supervisor_ws_routes() -> Router<Arc<AppState>> {
-    Router::new().route("/api/supervisor/ws", get(supervisor_ws))
+    Router::new().route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
 }

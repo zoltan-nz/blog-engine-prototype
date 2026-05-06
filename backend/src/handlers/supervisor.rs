@@ -28,16 +28,16 @@ use uuid::Uuid;
 ///      and return the result.
 pub async fn supervisor_ws(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
     let rx = state.command_rx.lock().await.take();
-    match rx {
-        None => {
+    rx.map_or_else(
+        || {
             tracing::warn!("supervisor connection rejected — already connected");
             StatusCode::CONFLICT.into_response()
-        }
-        Some(rx) => {
+        },
+        |rx| {
             tracing::info!("supervisor connected");
             ws.on_upgrade(move |socket| handle_supervisor_session(socket, rx, state))
-        }
-    }
+        },
+    )
 }
 
 type WsSender = SplitSink<WebSocket, Message>;
@@ -64,11 +64,11 @@ fn resolve_event(text: &str, pending: &mut Pending, event_tx: &broadcast::Sender
         return;
     };
 
-    if let Some(cid) = envelope.correlation_id {
-        if let Some(tx) = pending.remove(&cid) {
-            tracing::debug!(correlation_id = %cid, "resolved pending command via oneshot");
-            let _ = tx.send(envelope.payload.clone());
-        }
+    if let Some(cid) = envelope.correlation_id
+        && let Some(tx) = pending.remove(&cid)
+    {
+        tracing::debug!(correlation_id = %cid, "resolved pending command via oneshot");
+        let _ = tx.send(envelope.payload.clone());
     }
     let _ = event_tx.send(envelope);
 }
@@ -83,7 +83,7 @@ fn resolve_event(text: &str, pending: &mut Pending, event_tx: &broadcast::Sender
 /// Outbound (backend → supervisor):
 ///   - Receive `CommandMessage` from `command_rx`
 ///   - Serialize `envelope` as JSON, send over `socket`
-///   - Store `(envelope.id, response_tx)` in `pending` HashMap
+///   - Store `(envelope.id, response_tx)` in `pending` `HashMap`
 ///
 /// Inbound (supervisor → backend):
 ///   - Receive JSON text frame from `socket`
@@ -170,7 +170,7 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws))
+            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)
@@ -183,7 +183,7 @@ mod tests {
             .add_header("Sec-Websocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
             .await;
 
-        assert_eq!(response.status_code(), StatusCode::CONFLICT)
+        assert_eq!(response.status_code(), StatusCode::CONFLICT);
     }
 
     #[tokio::test]
@@ -200,7 +200,7 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws))
+            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)
@@ -230,7 +230,7 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws))
+            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)
@@ -267,15 +267,15 @@ mod tests {
         assert!(matches!(received.payload, Command::Ping));
 
         // supervisor sends the pong back
-        let pong_envelope = Envelope {
+        let reply = Envelope {
             id: Uuid::new_v4(),
-            correlation_id: Some(received.id), // <-- this is what resolves the pending oneshot
+            correlation_id: Some(received.id),
             idempotency_key: None,
             sequence: 0,
             timestamp: Utc::now(),
             payload: Event::Pong,
         };
-        supervisor.send_json(&pong_envelope).await;
+        supervisor.send_json(&reply).await;
 
         // backend side resolves
         let event = tokio::time::timeout(Duration::from_millis(500), response_rx).await;

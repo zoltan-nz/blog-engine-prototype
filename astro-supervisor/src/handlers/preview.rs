@@ -56,6 +56,7 @@ pub async fn start_preview(
         slug: slug.to_string(),
         child,
     });
+    drop(guard);
 
     Ok(url)
 }
@@ -68,6 +69,7 @@ pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AgentError> {
         tracing::info!(slug = %preview.slug, "stopping preview");
         preview.child.kill().await?;
     }
+    drop(guard);
     Ok(())
 }
 
