@@ -170,7 +170,10 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
+            .route(
+                "/api/supervisor/ws",
+                get(supervisor_ws).connect(supervisor_ws),
+            )
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)
@@ -200,7 +203,10 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
+            .route(
+                "/api/supervisor/ws",
+                get(supervisor_ws).connect(supervisor_ws),
+            )
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)
@@ -230,7 +236,10 @@ mod tests {
         });
 
         let app = Router::new()
-            .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
+            .route(
+                "/api/supervisor/ws",
+                get(supervisor_ws).connect(supervisor_ws),
+            )
             .with_state(state);
         let server = TestServer::builder()
             .transport(Transport::HttpRandomPort)

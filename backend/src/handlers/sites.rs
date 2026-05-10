@@ -163,10 +163,23 @@ pub async fn create_site(
         idempotency_key: None,
         sequence: 0,
         timestamp: chrono::Utc::now(),
-        payload: Command::CreateSite { name: req.name.clone(), slug: req.slug.clone() },
+        payload: Command::CreateSite {
+            name: req.name.clone(),
+            slug: req.slug.clone(),
+        },
     };
 
-    if state.command_tx.lock().await.send(CommandMessage { envelope, response_tx }).await.is_err() {
+    if state
+        .command_tx
+        .lock()
+        .await
+        .send(CommandMessage {
+            envelope,
+            response_tx,
+        })
+        .await
+        .is_err()
+    {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     }
 
@@ -179,10 +192,66 @@ pub async fn create_site(
                 git_url: String::new(),
                 preview_url: None,
             })),
-        ).into_response(),
-        Ok(Ok(Event::Error { code: ErrorCode::Conflict, message, .. })) => {
-            (StatusCode::CONFLICT, message).into_response()
-        }
+        )
+            .into_response(),
+        Ok(Ok(Event::Error {
+            code: ErrorCode::Conflict,
+            message,
+            ..
+        })) => (StatusCode::CONFLICT, message).into_response(),
+        Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
+    }
+}
+
+#[utoipa::path(
+    delete,
+    path = "/sites/{slug}",
+    params(
+        ("slug" = String, Path, description = "Site slug")
+    ),
+    responses(
+        (status = 204, description = "Site deleted"),
+        (status = 404, description = "Site not found"),
+        (status = 500, description = "Dev server failed to start"),
+    )
+)]
+pub async fn delete_site(
+    Path(slug): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    info!(slug = %slug, "Delete site requested");
+
+    let (response_tx, response_rx) = oneshot::channel::<Event>();
+    let envelope = admin_protocol::Envelope {
+        id: Uuid::new_v4(),
+        correlation_id: None,
+        idempotency_key: None,
+        sequence: 0,
+        timestamp: chrono::Utc::now(),
+        payload: Command::DeleteSite { slug: slug.clone() },
+    };
+
+    if state
+        .command_tx
+        .lock()
+        .await
+        .send(CommandMessage {
+            envelope,
+            response_tx,
+        })
+        .await
+        .is_err()
+    {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    }
+
+    match tokio::time::timeout(Duration::from_secs(10), response_rx).await {
+        Ok(Ok(Event::SiteDeleted)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Ok(Event::Error {
+            code: ErrorCode::SiteNotFound,
+            ..
+        })) => StatusCode::NOT_FOUND.into_response(),
         Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
     }
@@ -213,13 +282,20 @@ pub async fn preview_site(
         idempotency_key: None,
         sequence: 0,
         timestamp: chrono::Utc::now(),
-        payload: Command::StartPreview { slug: slug.clone(), port: None },
+        payload: Command::StartPreview {
+            slug: slug.clone(),
+            port: None,
+        },
     };
 
     if state
         .command_tx
-        .lock().await
-        .send(CommandMessage { envelope, response_tx })
+        .lock()
+        .await
+        .send(CommandMessage {
+            envelope,
+            response_tx,
+        })
         .await
         .is_err()
     {
@@ -235,15 +311,18 @@ pub async fn preview_site(
             })
             .into_response()
         }
-        Ok(Ok(Event::Error { code: ErrorCode::SiteNotFound, .. })) => {
-            StatusCode::NOT_FOUND.into_response()
-        }
-        Ok(Ok(Event::Error { code: ErrorCode::Conflict, .. })) => {
-            StatusCode::CONFLICT.into_response()
-        }
-        Ok(Ok(Event::Error { code: ErrorCode::PreviewTimeout, .. })) => {
-            StatusCode::GATEWAY_TIMEOUT.into_response()
-        }
+        Ok(Ok(Event::Error {
+            code: ErrorCode::SiteNotFound,
+            ..
+        })) => StatusCode::NOT_FOUND.into_response(),
+        Ok(Ok(Event::Error {
+            code: ErrorCode::Conflict,
+            ..
+        })) => StatusCode::CONFLICT.into_response(),
+        Ok(Ok(Event::Error {
+            code: ErrorCode::PreviewTimeout,
+            ..
+        })) => StatusCode::GATEWAY_TIMEOUT.into_response(),
         Ok(Ok(_) | Err(_)) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
     }
@@ -271,8 +350,12 @@ pub async fn stop_preview(State(state): State<Arc<AppState>>) -> impl IntoRespon
 
     if state
         .command_tx
-        .lock().await
-        .send(CommandMessage { envelope, response_tx })
+        .lock()
+        .await
+        .send(CommandMessage {
+            envelope,
+            response_tx,
+        })
         .await
         .is_err()
     {
@@ -364,12 +447,12 @@ mod tests {
 
     // --- create_site handler tests ---
 
+    use super::stop_preview;
     use admin_protocol::Event;
     use axum::Router;
     use axum::routing::post;
     use axum_test::{TestServer, Transport};
     use tokio::sync::{Mutex, broadcast, mpsc};
-    use uuid::Uuid;
 
     fn build_server(state: Arc<AppState>) -> TestServer {
         let app = Router::new()
@@ -396,7 +479,7 @@ mod tests {
         tokio::spawn(async move {
             let msg = command_rx.recv().await.unwrap();
             let _ = msg.response_tx.send(Event::SiteCreated {
-                site_id: Uuid::new_v4(),
+                slug: "my-blog".into(),
                 name: "My Blog".into(),
             });
         });

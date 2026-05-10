@@ -1,11 +1,11 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 
-pub mod handlers;
-pub mod state;
-pub mod routes;
-pub mod telemetry;
-pub mod config;
 pub mod app;
+pub mod config;
+pub mod handlers;
+pub mod routes;
+pub mod state;
+pub mod telemetry;
 
 use serde::Serialize;
 use utoipa::ToSchema;

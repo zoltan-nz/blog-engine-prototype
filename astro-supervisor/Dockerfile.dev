@@ -9,13 +9,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 
 # Install pnpm and create-astro globally
 ENV PNPM_HOME=/usr/local/pnpm
-ENV PATH="${PNPM_HOME}:${PATH}"
+ENV PATH="${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}"
 RUN npm install -g pnpm && pnpm add -g create-astro
 
 # Pre-warm the pnpm store with Astro dependencies.
 # Subsequent `pnpm install` calls in new sites just hard-link from the store (fast).
+# pnpm v10+ blocks build scripts by default — write pnpm-workspace.yaml to opt esbuild
+# and sharp back in (both are native binaries required by Vite/Astro).
 RUN mkdir -p /tmp/astro-seed \
-    && create-astro /tmp/astro-seed --template minimal --no-git --yes --skip-houston \
+    && create-astro /tmp/astro-seed --template minimal --no-git --yes --skip-houston --no-install \
+    && printf 'allowBuilds:\n  esbuild: true\n  sharp: true\nonlyBuiltDependencies:\n  - esbuild\n  - sharp\n' > /tmp/astro-seed/pnpm-workspace.yaml \
     && cd /tmp/astro-seed && pnpm install \
     && rm -rf /tmp/astro-seed
 

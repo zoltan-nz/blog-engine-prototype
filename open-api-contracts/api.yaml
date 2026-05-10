@@ -55,6 +55,24 @@ paths:
           description: Invalid request
         '500':
           description: Management API error
+  /sites/{slug}:
+    delete:
+      tags: []
+      operationId: delete_site
+      parameters:
+        - name: slug
+          in: path
+          description: Site slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Site deleted
+        '404':
+          description: Site not found
+        '500':
+          description: Dev server failed to start
   /sites/{slug}/preview:
     post:
       tags: []

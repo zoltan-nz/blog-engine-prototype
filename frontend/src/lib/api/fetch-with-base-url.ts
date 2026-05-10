@@ -9,7 +9,7 @@ export const fetchWithServerUrl = async <T>(
   const requestUrl = `${backendURL}${url}`;
 
   const response = await fetch(requestUrl, options);
-  const data = await response.json();
+  const data = response.status === 204 ? null : await response.json();
 
   return { status: response.status, data } as T;
 };

@@ -122,3 +122,75 @@ test.describe('Sites - Preview', () => {
     await expect(badge).toBeVisible();
   });
 });
+
+test.describe('Sites - Delete', () => {
+  // Fixed slug created once; idempotent across retries and reruns.
+  test.beforeAll(async ({ request }) => {
+    const resp = await request.post(`${BACKEND_URL}/sites`, {
+      data: { name: 'Delete API Test', slug: 'delete-api-test' },
+    });
+    expect([201, 409]).toContain(resp.status());
+  }, 120_000);
+
+  test('DELETE /sites/:slug returns 404 for unknown slug', async ({ request }) => {
+    const resp = await request.delete(`${BACKEND_URL}/sites/does-not-exist-xyz`);
+    expect(resp.status()).toBe(404);
+  });
+
+  test('DELETE /sites/:slug returns 204 and removes the site from the list', async ({ request }) => {
+    const resp = await request.delete(`${BACKEND_URL}/sites/delete-api-test`);
+    expect(resp.status()).toBe(204);
+
+    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
+    const gone = sites.find((s: { slug: string }) => s.slug === 'delete-api-test');
+    expect(gone).toBeUndefined();
+  });
+
+  test('DELETE /sites/:slug stops an active preview before deleting', async ({ request }) => {
+    // Create a fresh site, start a preview, then delete — preview must not block deletion.
+    test.setTimeout(240_000); // scaffold + preview start
+
+    const slug = 'delete-with-preview-test';
+    const create = await request.post(`${BACKEND_URL}/sites`, {
+      data: { name: 'Delete With Preview Test', slug },
+    });
+    expect([201, 409]).toContain(create.status());
+
+    const preview = await request.post(`${BACKEND_URL}/sites/${slug}/preview`);
+    expect(preview.status()).toBe(200);
+
+    const del = await request.delete(`${BACKEND_URL}/sites/${slug}`);
+    expect(del.status()).toBe(204);
+
+    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
+    expect(sites.find((s: { slug: string }) => s.slug === slug)).toBeUndefined();
+  });
+
+  test.describe('UI', () => {
+    // Separate slug so the API tests above don't consume what this test needs.
+    test.beforeAll(async ({ request }) => {
+      const resp = await request.post(`${BACKEND_URL}/sites`, {
+        data: { name: 'Delete UI Test', slug: 'delete-ui-test' },
+      });
+      expect([201, 409]).toContain(resp.status());
+    }, 120_000);
+
+    test('Destroy button removes the site from the list', async ({ page }) => {
+      // Override window.confirm before any page script runs so the Destroy dialog
+      // is auto-accepted without relying on the dialog event timing.
+      await page.addInitScript(() => {
+        (window as Window & { confirm: () => boolean }).confirm = () => true;
+      });
+      await page.goto(FRONTEND_URL);
+
+      const card = page.locator('li').filter({ hasText: 'Delete UI Test' });
+      await expect(card).toBeVisible({ timeout: 10_000 });
+
+      await card.getByRole('button', { name: 'Destroy' }).click();
+
+      await expect(page.locator('li').filter({ hasText: 'Delete UI Test' })).not.toBeVisible({
+        timeout: 15_000,
+      });
+    });
+  });
+});

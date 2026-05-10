@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use axum::Router;
-use tokio::sync::{broadcast, Mutex};
-use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
 use crate::config::Config;
 use crate::routes::{create_openapi_routes, create_supervisor_ws_routes};
 use crate::state::AppState;
+use axum::Router;
+use std::sync::Arc;
+use tokio::sync::{Mutex, broadcast};
+use tower_http::cors::{Any, CorsLayer};
+use tracing::info;
 
 pub fn create_app(config: Config) -> (Router, Arc<AppState>) {
     info!("Initializing application.");
@@ -30,7 +30,7 @@ pub fn create_app(config: Config) -> (Router, Arc<AppState>) {
         .merge(create_supervisor_ws_routes())
         .merge(create_openapi_routes())
         .layer(cors)
-    .with_state(Arc::clone(&state));
+        .with_state(Arc::clone(&state));
 
     (app, state)
 }

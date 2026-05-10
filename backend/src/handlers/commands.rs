@@ -1,11 +1,11 @@
 use crate::state::{AppState, CommandMessage};
 use admin_protocol::{Command, Envelope, Event};
-use axum::extract::State;
-use axum::response::IntoResponse;
 use axum::Json;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use std::sync::Arc;
 use std::time::Duration;
-use axum::http::StatusCode;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
@@ -35,9 +35,14 @@ pub async fn dispatch_command(
     let (response_tx, response_rx) = oneshot::channel::<Event>();
     tracing::info!(command = ?envelope.payload, id = %envelope.id, "dispatching command to supervisor");
 
-    if state.command_tx
-        .lock().await
-        .send(CommandMessage { envelope, response_tx})
+    if state
+        .command_tx
+        .lock()
+        .await
+        .send(CommandMessage {
+            envelope,
+            response_tx,
+        })
         .await
         .is_err()
     {

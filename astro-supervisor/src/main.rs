@@ -5,12 +5,12 @@ mod state;
 mod telemetry;
 mod ws_client;
 
-use std::fs::create_dir_all;
-use std::sync::Arc;
-use tracing::error;
 use crate::config::Config;
 use crate::state::AppState;
 use crate::telemetry::init_tracing;
+use std::fs::create_dir_all;
+use std::sync::Arc;
+use tracing::error;
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +21,11 @@ async fn main() {
     create_dir_all(&config.sites_dir).expect("Failed to create SITES_DIR");
     create_dir_all(&config.git_repos_dir).expect("Failed to create GIT_REPOS_DIR");
 
-    let state = Arc::new(AppState::new(config.sites_dir, config.git_repos_dir, config.preview_port));
+    let state = Arc::new(AppState::new(
+        config.sites_dir,
+        config.git_repos_dir,
+        config.preview_port,
+    ));
 
     check_required_command_exist("pnpm", "npm install -g pnpm");
     check_required_command_exist("create-astro", "pnpm add -g create-astro");

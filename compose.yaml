@@ -75,6 +75,7 @@ services:
       - '3000:3000'
     environment:
       - PUBLIC_API_BACKEND_URL=http://localhost:8080
+      - CI=true
     develop:
       watch:
         - action: sync

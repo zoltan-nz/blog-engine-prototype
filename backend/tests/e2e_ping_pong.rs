@@ -25,7 +25,10 @@ fn build_backend_state() -> Arc<AppState> {
 
 fn build_backend_server(state: Arc<AppState>) -> TestServer {
     let app = Router::new()
-        .route("/api/supervisor/ws", get(supervisor_ws).connect(supervisor_ws))
+        .route(
+            "/api/supervisor/ws",
+            get(supervisor_ws).connect(supervisor_ws),
+        )
         .route("/api/commands", post(dispatch_command))
         .with_state(state);
     TestServer::builder()

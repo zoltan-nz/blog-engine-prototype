@@ -39,7 +39,15 @@ pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AgentError> {
 /// Both commands are assumed to be on `PATH` (Node.js + pnpm must be installed).
 pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
     let create = tokio::process::Command::new("create-astro")
-        .args([".", "--template", "minimal", "--no-git", "--yes", "--skip-houston", "--no-install"])
+        .args([
+            ".",
+            "--template",
+            "minimal",
+            "--no-git",
+            "--yes",
+            "--skip-houston",
+            "--no-install",
+        ])
         .current_dir(site_dir)
         .status()
         .await?;
@@ -49,6 +57,13 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
             "create-astro exited with {create}"
         )));
     }
+
+    // pnpm v10+ blocks build scripts by default. esbuild and sharp are native binaries
+    // required by Vite/Astro — without this file pnpm install exits with ERR_PNPM_IGNORED_BUILDS.
+    fs::write(
+        site_dir.join("pnpm-workspace.yaml"),
+        "allowBuilds:\n  esbuild: true\n  sharp: true\nonlyBuiltDependencies:\n  - esbuild\n  - sharp\n",
+    )?;
 
     let install = tokio::process::Command::new("pnpm")
         .args(["install"])
@@ -77,11 +92,32 @@ pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData,
     let manifest_path = sites_dir.join(MANIFEST_FILE_NAME);
     let content = fs::read_to_string(&manifest_path)?;
     let mut manifest: SitesManifest = serde_json::from_str(&content)?;
-    let site = SiteData { folder: slug.into(), name: name.into(), git_url: String::new() };
+    let site = SiteData {
+        folder: slug.into(),
+        name: name.into(),
+        git_url: String::new(),
+    };
     manifest.sites.push(site.clone());
     fs::write(&manifest_path, serde_json::to_string(&manifest)?)?;
 
     Ok(site)
+}
+
+pub fn delete_site(sites_dir: &Path, slug: &str) -> Result<(), AgentError> {
+    let sites = list_sites(sites_dir)?;
+    if !sites.iter().any(|s| s.folder == slug) {
+        return Err(AgentError::SiteNotFound(slug.into()));
+    }
+
+    fs::remove_dir_all(sites_dir.join(slug))?;
+
+    let manifest_path = sites_dir.join(MANIFEST_FILE_NAME);
+    let content = fs::read_to_string(&manifest_path)?;
+    let mut manifest: SitesManifest = serde_json::from_str(&content)?;
+    manifest.sites.retain(|s| s.folder != slug);
+    fs::write(&manifest_path, serde_json::to_string(&manifest)?)?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -154,5 +190,27 @@ mod tests {
         let result = create_site(sites.path(), "Another Site", "my-site");
 
         assert!(matches!(result, Err(AgentError::SiteAlreadyExists(_))));
+    }
+
+    #[test]
+    fn delete_site_removes_folder_and_manifest_entry() {
+        let sites = TempDir::new().unwrap();
+        create_site(sites.path(), "My Site", "my-site").unwrap();
+
+        delete_site(sites.path(), "my-site").unwrap();
+
+        assert!(!sites.path().join("my-site").exists());
+        let remaining = list_sites(sites.path()).unwrap();
+        assert_eq!(remaining.len(), 0);
+    }
+
+    #[test]
+    fn delete_site_returns_err_when_slug_not_found() {
+        let sites = TempDir::new().unwrap();
+        // Initialise manifest so list_sites doesn't fail.
+        list_sites(sites.path()).unwrap();
+
+        let result = delete_site(sites.path(), "ghost");
+        assert!(matches!(result, Err(AgentError::SiteNotFound(_))));
     }
 }

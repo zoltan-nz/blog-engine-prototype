@@ -31,6 +31,7 @@ pub async fn start_preview(
 
     let child = tokio::process::Command::new("pnpm")
         .args(["dev", "--port", &port.to_string(), "--host", "0.0.0.0"])
+        .env_remove("PNPM_SCRIPT_SRC_DIR")
         .current_dir(&site_dir)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -87,7 +88,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let state = make_state(tmp.path());
 
-        let err = start_preview(&state, "nonexistent", 4321).await.unwrap_err();
+        let err = start_preview(&state, "nonexistent", 4321)
+            .await
+            .unwrap_err();
         assert!(matches!(err, AgentError::SiteNotFound(_)));
     }
 

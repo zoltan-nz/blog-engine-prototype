@@ -22,10 +22,11 @@ pub enum ErrorCode {
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
     CreateSite { name: String, slug: String },
-    BuildSite { site_id: Uuid, force: bool },
+    BuildSite { slug: String, force: bool },
     StartPreview { slug: String, port: Option<u16> },
     StopPreview,
-    GetStatus { site_id: Uuid },
+    GetStatus { slug: String },
+    DeleteSite { slug: String },
     Ping,
 }
 
@@ -33,12 +34,13 @@ pub enum Command {
 #[serde(tag = "type", content = "payload")]
 pub enum Event {
     SiteCreated {
-        site_id: Uuid,
+        slug: String,
         name: String,
     },
+    SiteDeleted,
     BuildStarted {
         build_id: Uuid,
-        site_id: Uuid,
+        slug: String,
     },
     BuildProgress {
         build_id: Uuid,
@@ -76,7 +78,7 @@ pub enum Event {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[allow(clippy::option_if_let_else)]
 pub struct Envelope<T> {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub correlation_id: Option<Uuid>,  // links response to request
     pub idempotency_key: Option<Uuid>, // client-generated; same across retries
     pub sequence: u64,                 // monotonic; used for replay-from detection

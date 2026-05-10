@@ -1,11 +1,13 @@
 <script lang="ts">
   import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
+  import type { CreateSiteRequest } from "../generated-api.js";
   import {
-    createListSites,
     createCreateSite,
+    createDeleteSite,
+    createListSites,
     createPreviewSite,
   } from "../generated-api.js";
-  import type { CreateSiteRequest } from "../generated-api.js";
+  import { Loader, Trash2 } from "@lucide/svelte";
 
   // Converts a blog name into a URL-safe slug (directory name + git repo name).
   // Rules: GitHub repo names allow [a-z0-9._-], max 100 chars.
@@ -21,7 +23,9 @@
   const sitesQuery = createListSites();
   const createSiteMutation = createCreateSite();
   const previewMutation = createPreviewSite();
+  const deleteSiteMutation = createDeleteSite();
   let previewingSlug = $state<string | null>(null);
+  let deletingSlug = $state<string | null>(null);
 
   let dialogOpen = $state(false);
   let blogName = $state("");
@@ -53,6 +57,23 @@
       }
     } finally {
       previewingSlug = null;
+    }
+  }
+
+  async function handleDelete(slug: string) {
+    if (
+      !confirm(
+        "Are you sure you want to destroy this blog? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    deletingSlug = slug;
+    try {
+      await deleteSiteMutation.mutateAsync({ slug });
+      await sitesQuery.refetch();
+    } finally {
+      deletingSlug = null;
     }
   }
 </script>
@@ -108,6 +129,7 @@
       <ul class="grid gap-4 sm:grid-cols-2">
         {#each sites as site (site.slug)}
           {@const isPreviewing = previewingSlug === site.slug}
+          {@const isDeleting = deletingSlug === site.slug}
           <li
             class="card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-sm"
           >
@@ -160,6 +182,20 @@
                   {/if}
                   Preview
                 </button>
+                <div class="ml-auto">
+                  <button
+                    onclick={() => handleDelete(site.slug)}
+                    disabled={isDeleting}
+                    class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
+                  >
+                    {#if isDeleting}
+                      <Loader size={16} class="animate-spin" />
+                    {:else}
+                      <Trash2 size={16} />
+                    {/if}
+                    Destroy
+                  </button>
+                </div>
               </div>
             </div>
           </li>

@@ -12,11 +12,11 @@ export default defineConfig({
           extension: ".js",
         },
       },
-      prettier: true,
+      formatter: "prettier",
       tsconfig: "./tsconfig.json",
     },
     input: {
-      target: "../../open-api-contracts/api.yaml",
+      target: "../open-api-contracts/api.yaml",
     },
   },
 });

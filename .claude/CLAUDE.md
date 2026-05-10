@@ -15,6 +15,14 @@
   a final answer. This can reveal faulty logic or assumptions.
 - Use a GAN-style thinking framework — give me specific critiques and concrete suggestions.
 
+### Before Coding
+
+- **Surface ambiguity first.** If multiple interpretations exist, present them — don't pick one silently.
+- **State assumptions explicitly.** If uncertain about scope or intent, ask before starting.
+- **Push back when warranted.** If a simpler approach exists, say so. A bad plan stated clearly is easier to correct
+  than a bad implementation delivered silently.
+- **Name confusion.** If something is unclear, stop and say what's confusing. Don't hallucinate a coherent picture.
+
 ## Teaching Protocol
 
 When the user needs to write code involving an unfamiliar library or syntax, always follow this sequence — never skip steps:
@@ -71,6 +79,17 @@ Headless CMS for managing Astro static sites.
   >1M downloads and active maintenance. Common replacements: exponential backoff → `backoff`, retry logic →
   `backon`, config → `envy`+`dotenvy`, validation → `validator`.
 - Always check the latest API of the suggested library or framework before recommending usage patterns
+
+## Surgical Changes
+
+Touch only what the request requires. This is the hardest discipline — don't let "while I'm here" reasoning creep in.
+
+- **The traceability test:** every changed line must trace directly to the user's request. If it can't, revert it.
+- **Don't improve adjacent code** you weren't asked to touch — no reformatting, no renaming, no "while I'm here" fixes.
+- **Match existing style**, even if you'd do it differently. Style consistency beats local optimisation.
+- **If you notice an unrelated issue**, name it in your response — don't silently fix it. Let the user decide.
+- **Orphans from YOUR changes:** if your edit makes an import/variable/function unused, remove it.
+- **Pre-existing dead code:** mention it, don't delete it unasked.
 
 ## Rust Standards (RFC 430)
 
@@ -156,6 +175,29 @@ tracing-test = "0.2"                                  # all crates with tracing
 - mise tasks follow the pattern: `test-{service}`, `run-{service}`, `check-{service}`
 - Keep `mise.toml` and service READMEs in sync whenever commands or env vars change
 
+## Frontend Conventions
+
+- **Icons:** `@lucide/svelte` is installed — always import named icons (`Trash2`, `Loader`, etc.). Never write inline
+  `<svg>` markup for icons.
+- **Svelte 5 `{@const}`:** must be a direct child of `{#each}`, `{#if}`, `{:else}`, etc. — not nested inside `<div>`
+  or other HTML elements. Place all `{@const}` declarations at the top of the block they belong to.
+- **HTTP 204 and `response.json()`:** a 204 No Content response has no body. Calling `.json()` on it throws
+  `SyntaxError`. Guard all fetch wrappers: `response.status === 204 ? null : await response.json()`.
+- **Mutation hooks over raw fetch functions:** use `createDeleteSite()`, `createPreviewSite()` etc. (TanStack Query
+  mutations) rather than the raw `deleteSite()` / `previewSite()` functions — mutations give `isPending`, error state,
+  and integrate with the query cache.
+
+## Environment Gotchas
+
+- **pnpm v10 build scripts:** blocked by default. New Astro projects need a `pnpm-workspace.yaml` with
+  `allowBuilds: { esbuild: true, sharp: true }` written before `pnpm install` runs.
+- **pnpm v10 in Docker without TTY:** `pnpm dev` or `pnpm install` aborts if it detects a stale `node_modules` and
+  has no TTY to confirm. Set `CI=true` in the container environment to suppress the prompt.
+- **pnpm global bin path:** pnpm v10 puts binaries in `$PNPM_HOME/bin`, not `$PNPM_HOME`. Dockerfile PATH must
+  include both: `ENV PATH="${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}"`.
+- **Docker layer caching:** copy `pnpm-workspace.yaml` in the same `COPY` instruction as `package.json` and
+  `pnpm-lock.yaml` — before the `RUN pnpm install` step. Missing this causes cache misses and install failures.
+
 ## Key Decisions
 
 - **Environment parity:** one code path; local/prod differ only by config. `AUTH_PROVIDER=dev|github`,
@@ -171,6 +213,8 @@ Steps 1–10 complete. Step 11 status:
 - [x] `astro-supervisor` — Rust binary; connects outbound to backend via WebSocket (spec 0004)
 - [x] `admin-protocol` crate — shared `Command`/`Event`/`Envelope` types
 - [x] Create site (manifest + scaffold via `create-astro` + `pnpm install`)
-- [x] Astro preview (`pnpm dev` lifecycle, `StartPreview`/`StopPreview` commands, 14/14 tests GREEN)
+- [x] Astro preview (`pnpm dev` lifecycle, `StartPreview`/`StopPreview` commands)
+- [x] Delete site (`DeleteSite` command — stops preview if active, removes manifest entry + directory)
+- [x] 18/18 e2e tests GREEN (API + UI + preview + delete)
 - [ ] Auth with dev provider
 - [ ] Create site with local git provider

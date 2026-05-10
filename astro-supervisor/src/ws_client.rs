@@ -37,7 +37,9 @@ pub async fn connect_and_run(url: String, state: Arc<AppState>) -> anyhow::Resul
     // Step 1: parse "ws://host:port/path" into a TCP address and an HTTP/2 URI.
     // h2 CONNECT uses http scheme, not ws — axum's extractor matches on path only.
     let uri = url.parse::<hyper::Uri>()?;
-    let host = uri.host().ok_or_else(|| anyhow::anyhow!("missing host in url: {url}"))?;
+    let host = uri
+        .host()
+        .ok_or_else(|| anyhow::anyhow!("missing host in url: {url}"))?;
     let port = uri.port_u16().unwrap_or(80);
     let addr = format!("{host}:{port}");
     let path = uri.path_and_query().map_or("/", |pq| pq.as_str());
@@ -132,10 +134,34 @@ async fn dispatch_command(cmd: Command, state: &Arc<AppState>) -> Event {
                         };
                     }
                     Event::SiteCreated {
-                        site_id: Uuid::new_v4(),
+                        slug: site.folder,
                         name: site.name,
                     }
                 }
+            }
+        }
+        Command::DeleteSite { slug } => {
+            let needs_stop = {
+                let guard = state.lock_preview().await;
+                guard.as_ref().map_or(false, |p| p.slug == slug)
+            };
+            if needs_stop {
+                if let Err(e) = crate::handlers::preview::stop_preview(state).await {
+                    tracing::warn!(slug = %slug, error = %e, "could not stop preview before delete");
+                }
+            }
+            match crate::handlers::sites::delete_site(&state.sites_dir, &slug) {
+                Ok(()) => Event::SiteDeleted,
+                Err(AgentError::SiteNotFound(_)) => Event::Error {
+                    code: ErrorCode::SiteNotFound,
+                    message: format!("site '{slug}' not found"),
+                    command_id: None,
+                },
+                Err(e) => Event::Error {
+                    code: ErrorCode::Internal,
+                    message: format!("{e}"),
+                    command_id: None,
+                },
             }
         }
         Command::StartPreview { slug, port } => {
@@ -172,7 +198,7 @@ async fn dispatch_command(cmd: Command, state: &Arc<AppState>) -> Event {
                 command_id: None,
             },
         },
-        Command::GetStatus { site_id: _site_id } => Event::BuildProgress {
+        Command::GetStatus { slug: _ } => Event::BuildProgress {
             build_id: Uuid::new_v4(),
             phase: "not implemented".into(),
             percent: 0.0,
