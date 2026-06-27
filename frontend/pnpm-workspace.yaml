@@ -1,4 +1,8 @@
+minimumReleaseAge: 10080
+blockExoticSubdeps: true
 allowBuilds:
+  sharp: true
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
+  - sharp

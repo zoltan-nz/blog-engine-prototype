@@ -1,4 +1,4 @@
-use crate::error::AgentError;
+use crate::astro::error::AstroError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -17,7 +17,7 @@ struct SitesManifest {
     sites: Vec<SiteData>,
 }
 
-pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AgentError> {
+pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AstroError> {
     let manifest_file = sites_dir.join(MANIFEST_FILE_NAME);
     if !manifest_file.exists() {
         std::fs::write(&manifest_file, r#"{ "sites": [] }"#)?;
@@ -37,7 +37,7 @@ pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AgentError> {
 ///   2. `pnpm install`
 ///
 /// Both commands are assumed to be on `PATH` (Node.js + pnpm must be installed).
-pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
+pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
     let create = tokio::process::Command::new("create-astro")
         .args([
             ".",
@@ -53,7 +53,7 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
         .await?;
 
     if !create.success() {
-        return Err(AgentError::CommandFailed(format!(
+        return Err(AstroError::CommandFailed(format!(
             "create-astro exited with {create}"
         )));
     }
@@ -72,7 +72,7 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
         .await?;
 
     if !install.success() {
-        return Err(AgentError::CommandFailed(format!(
+        return Err(AstroError::CommandFailed(format!(
             "pnpm install exited with {install}"
         )));
     }
@@ -81,10 +81,10 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AgentError> {
     Ok(())
 }
 
-pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData, AgentError> {
+pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData, AstroError> {
     let existing = list_sites(sites_dir)?;
     if existing.iter().any(|s| s.folder == slug) {
-        return Err(AgentError::SiteAlreadyExists(slug.into()));
+        return Err(AstroError::SiteAlreadyExists(slug.into()));
     }
 
     fs::create_dir_all(sites_dir.join(slug))?;
@@ -103,10 +103,10 @@ pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData,
     Ok(site)
 }
 
-pub fn delete_site(sites_dir: &Path, slug: &str) -> Result<(), AgentError> {
+pub fn delete_site(sites_dir: &Path, slug: &str) -> Result<(), AstroError> {
     let sites = list_sites(sites_dir)?;
     if !sites.iter().any(|s| s.folder == slug) {
-        return Err(AgentError::SiteNotFound(slug.into()));
+        return Err(AstroError::SiteNotFound(slug.into()));
     }
 
     fs::remove_dir_all(sites_dir.join(slug))?;
@@ -167,7 +167,7 @@ mod tests {
 
         create_site(sites.path(), "My Site", "my-site").unwrap();
 
-        assert!(sites.path().join("my-site").is_dir())
+        assert!(sites.path().join("my-site").is_dir());
     }
 
     #[test]
@@ -189,7 +189,7 @@ mod tests {
         create_site(sites.path(), "My Site", "my-site").unwrap();
         let result = create_site(sites.path(), "Another Site", "my-site");
 
-        assert!(matches!(result, Err(AgentError::SiteAlreadyExists(_))));
+        assert!(matches!(result, Err(AstroError::SiteAlreadyExists(_))));
     }
 
     #[test]
@@ -211,6 +211,6 @@ mod tests {
         list_sites(sites.path()).unwrap();
 
         let result = delete_site(sites.path(), "ghost");
-        assert!(matches!(result, Err(AgentError::SiteNotFound(_))));
+        assert!(matches!(result, Err(AstroError::SiteNotFound(_))));
     }
 }

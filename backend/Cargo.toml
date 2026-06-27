@@ -7,32 +7,25 @@ edition = "2024"
 name = "blog-engine-api"
 path = "src/main.rs"
 
-[[bin]]
-name = "gen-open-api-yaml"
-path = "src/bin/gen_open_api_yaml.rs"
-
-
 [dependencies]
 axum = { version = "0.8.9", features = ["ws", "http2"] }
-tokio = { version = "1.52.2", features = ["rt-multi-thread", "macros", "rt", "sync", "time"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "rt", "sync", "time", "process", "net"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tower = "0.5.3"
-tower-http = { version = "0.6.10", features = ["cors"] }
+tower-http = { version = "0.6.11", features = ["cors"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 chrono = { version = "0.4.44", features = ["serde"] }
-uuid = { version = "1.23.1", features = ["v4"] }
-utoipa = { version = "5.5.0", features = ["axum_extras", "auto_into_responses", "yaml"] }
+uuid = { version = "1.23.1", features = ["v4", "serde"] }
+utoipa = { version = "5.5.0", features = ["axum_extras", "auto_into_responses", "yaml", "uuid", "chrono"] }
 utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-admin-protocol = { path = "../admin-protocol" }
-futures-util = "0.3.32"
-backon = "1.6.0"
+thiserror = "2.0.12"
 dotenvy = "0.15.7"
 envy = "0.4.2"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }
-tokio = { version = "1.52.2", features = ["rt", "macros", "time"] }
-astro-supervisor = { path = "../astro-supervisor" }
+tokio = { version = "1.52.3", features = ["rt", "macros", "time"] }
+tempfile = "3.23.0"

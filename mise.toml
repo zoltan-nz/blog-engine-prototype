@@ -49,11 +49,6 @@ description = "Run Rust backend unit tests in watch mode"
 run = "cargo watch -x test"
 dir = "backend"
 
-[tasks.test-unit-supervisor]
-description = "Run astro-supervisor unit tests in watch mode"
-run = "cargo watch -x test"
-dir = "astro-supervisor"
-
 [tasks.test-unit-frontend]
 description = "Run SvelteKit unit tests in watch mode"
 run = "pnpm exec vitest --watch"
@@ -64,7 +59,6 @@ description = "Run all unit tests"
 run = """
 echo "=== Running all unit tests ===" && \
 (cd backend && cargo test) && \
-(cd astro-supervisor && cargo test) && \
 (cd frontend && pnpm exec vitest run) && \
 echo "=== All unit tests passed ==="
 """
@@ -76,7 +70,7 @@ echo "=== All unit tests passed ==="
 [tasks.stats]
 description = "Show container resource usage"
 run = """
-echo "=== Image Sizes ===" && docker image ls --format "table {{.Repository}}\t{{.Size}}" | grep -E "(backend|frontend|supervisor|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
+echo "=== Image Sizes ===" && docker image ls --format "table {{.Repository}}\t{{.Size}}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
 """
 
 # =============================================================================
@@ -97,25 +91,14 @@ run = "docker compose -f compose.prod.yaml down"
 
 [tasks.format]
 description = "Format code in all services"
-run = "pnpm format && (cd backend && cargo fmt) && (cd astro-supervisor && cargo fmt)"
+run = "pnpm format && (cd backend && cargo fmt)"
 
 [tasks.dev-backend]
 description = "Start Rust backend locally (hot reload)"
-run = "cargo watch -x 'run --bin blog-engine-api'"
+run = "cargo watch -x 'run'"
 dir = "backend"
 
-[tasks.dev-supervisor]
-description = "Run astro-supervisor locally with cargo watch"
-dir = "astro-supervisor"
-run = "cargo watch -x 'run --bin astro-supervisor'"
-
-[tasks.spec-gen]
-description = "Generate OpenAPI yaml from Rust backend"
-run = "cargo run --bin gen-open-api-yaml"
+[tasks.build]
+description = "Run cargo build with TypeScript binding generator"
+run = "cargo build"
 dir = "backend"
-depends_post = ["format"]
-
-[tasks.gen-api-clients]
-description = "Generate types and query clients from OpenAPI specification"
-depends = ["spec-gen"]
-run = "pnpm --filter frontend run generate"

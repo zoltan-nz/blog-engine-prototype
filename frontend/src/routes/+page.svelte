@@ -6,8 +6,9 @@
     createDeleteSite,
     createListSites,
     createPreviewSite,
+    createStopPreview,
   } from "../generated-api.js";
-  import { Loader, Trash2 } from "@lucide/svelte";
+  import { Loader, LoaderCircle, Trash2, Play, Square } from "@lucide/svelte";
 
   // Converts a blog name into a URL-safe slug (directory name + git repo name).
   // Rules: GitHub repo names allow [a-z0-9._-], max 100 chars.
@@ -23,8 +24,10 @@
   const sitesQuery = createListSites();
   const createSiteMutation = createCreateSite();
   const previewMutation = createPreviewSite();
+  const stopPreviewMutation = createStopPreview();
   const deleteSiteMutation = createDeleteSite();
-  let previewingSlug = $state<string | null>(null);
+
+  let previewingSlug = $state<string | null>();
   let deletingSlug = $state<string | null>(null);
 
   let dialogOpen = $state(false);
@@ -53,7 +56,7 @@
       const result = await previewMutation.mutateAsync({ slug });
       if (result.status === 200 && result.data.data.previewUrl) {
         window.open(result.data.data.previewUrl, "_blank");
-        sitesQuery.refetch();
+        await sitesQuery.refetch();
       }
     } finally {
       previewingSlug = null;
@@ -128,7 +131,8 @@
     {:else}
       <ul class="grid gap-4 sm:grid-cols-2">
         {#each sites as site (site.slug)}
-          {@const isPreviewing = previewingSlug === site.slug}
+          {@const isPreviewLive = site.previewUrl !== null && site.previewUrl !== ""}
+          {@const isPreviewingStarted = previewingSlug === site.slug}
           {@const isDeleting = deletingSlug === site.slug}
           <li
             class="card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-sm"
@@ -138,10 +142,8 @@
                 <div>
                   <h2 class="flex items-center gap-2 text-xl font-bold">
                     {site.name}
-                    {#if site.previewUrl}
-                      <span class="badge preset-filled-success-500 text-xs"
-                        >▶ Live</span
-                      >
+                    {#if isPreviewLive}
+                      <a href={site.previewUrl} target="_blank" class="badge preset-filled-success-500 text-xs">Live</a>
                     {/if}
                   </h2>
                   <p class="font-mono text-sm text-surface-600-400">
@@ -155,32 +157,18 @@
               <div class="mt-4 flex gap-2">
                 <button
                   class="btn preset-outlined-surface-300-700 btn-sm"
-                  disabled={isPreviewing}
+                  disabled={isPreviewingStarted}
                   onclick={() => handlePreview(site.slug)}
                 >
-                  {#if isPreviewing}
-                    <svg
-                      class="size-4 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      ></path>
-                    </svg>
+                  {#if isPreviewingStarted}
+                    <LoaderCircle size={16} class="animate-spin" />
+                    Building preview...
                   {/if}
-                  Preview
+                  {#if isPreviewLive}
+                    <Square size={16} />Stop Preview
+                    {:else}
+                    <Play size={16} />Start Preview
+                  {/if}
                 </button>
                 <div class="ml-auto">
                   <button

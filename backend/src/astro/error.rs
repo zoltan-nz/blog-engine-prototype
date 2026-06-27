@@ -1,7 +1,9 @@
 use thiserror::Error;
 
+/// Errors from in-process Astro site and preview management.
+/// (Was the supervisor's `AgentError`; same variants.)
 #[derive(Error, Debug)]
-pub enum AgentError {
+pub enum AstroError {
     #[error("Site '{0}' does not exist")]
     SiteNotFound(String),
 

@@ -1,27 +1,20 @@
 FROM rust:slim-trixie
 
-RUN apt-get update && apt-get install -y curl pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl pkg-config libssl-dev git && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install cargo-watch
+RUN npm config set fund false && npm upgrade -g npm && npm install -g pnpm && pnpm --version
 
-WORKDIR /workspace
+WORKDIR /app
+COPY Cargo.toml Cargo.lock*
 
-# Copy shared crates — changes here bust dependency cache
-COPY admin-protocol/ admin-protocol/
-COPY astro-supervisor/Cargo.toml astro-supervisor/Cargo.lock* astro-supervisor/
-
-COPY backend/Cargo.toml backend/Cargo.lock* backend/
-
-# Dummy src to pre-build dependencies
-RUN mkdir -p astro-supervisor/src && echo "fn main() {}" > astro-supervisor/src/main.rs && touch astro-supervisor/src/lib.rs
-RUN mkdir backend/src && echo "fn main() {}" > backend/src/main.rs
-RUN cd backend && cargo build || true
-RUN rm -rf backend/src astro-supervisor/src
+RUN cd app && cargo build || true
+RUN rm -rf backend/src
 
 COPY backend/src backend/src
 
 WORKDIR /workspace/backend
 
-EXPOSE 8080
+EXPOSE [8080, 4321]
 
-CMD cargo watch -x 'run --bin blog-engine-api'
+CMD cargo watch -x 'run'

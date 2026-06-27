@@ -5,10 +5,16 @@ use std::path::PathBuf;
 pub struct Config {
     #[serde(default = "default_sites_dir")]
     pub sites_dir: PathBuf,
+    #[serde(default = "default_preview_port")]
+    pub preview_port: u16,
 }
 
 fn default_sites_dir() -> PathBuf {
     PathBuf::from("/tmp/astro-sites")
+}
+
+const fn default_preview_port() -> u16 {
+    4321
 }
 
 impl Config {

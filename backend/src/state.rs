@@ -1,19 +1,31 @@
-use admin_protocol::{Envelope, Event};
 use std::path::PathBuf;
-use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::{Mutex, MutexGuard};
 
-pub struct CommandMessage {
-    pub envelope: admin_protocol::Envelope<admin_protocol::Command>,
-    pub response_tx: tokio::sync::oneshot::Sender<admin_protocol::Event>,
+/// A running `pnpm dev` preview process. Owns the child so it can be killed on
+/// stop. `url` lets `list_sites` report `previewUrl` without a second field.
+pub struct ActivePreview {
+    pub slug: String,
+    pub url: String,
+    pub child: tokio::process::Child,
 }
 
 pub struct AppState {
-    pub command_tx: Mutex<Sender<CommandMessage>>,
-    pub event_tx: broadcast::Sender<Envelope<Event>>,
-    pub command_rx: Mutex<Option<Receiver<CommandMessage>>>,
     pub sites_dir: PathBuf,
-    /// Tracks the slug and URL of the currently active preview server.
-    /// Set by `preview_site`, cleared by `stop_preview`, read by `list_sites`.
-    pub active_preview: Mutex<Option<(String, String)>>,
+    pub preview_port: u16,
+    /// At most one preview runs at a time; the mutex serialises start/stop.
+    preview: Mutex<Option<ActivePreview>>,
+}
+
+impl AppState {
+    pub fn new(sites_dir: impl Into<PathBuf>, preview_port: u16) -> Self {
+        Self {
+            sites_dir: sites_dir.into(),
+            preview_port,
+            preview: Mutex::new(None),
+        }
+    }
+
+    pub async fn lock_preview(&self) -> MutexGuard<'_, Option<ActivePreview>> {
+        self.preview.lock().await
+    }
 }

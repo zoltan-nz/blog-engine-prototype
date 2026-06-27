@@ -9,33 +9,6 @@ volumes:
   git-repos:
 
 services:
-  astro-supervisor:
-    pull_policy: always
-    build:
-      context: .
-      dockerfile: astro-supervisor/Dockerfile.dev
-    networks:
-      - blog-net
-    volumes:
-      - astro-sites:/app/astro-sites
-      - git-repos:/app/git-repos
-    environment:
-      - BACKEND_WS_URL=ws://backend:8080/api/supervisor/ws
-      - SITES_DIR=/app/astro-sites
-      - GIT_REPOS_DIR=/app/git-repos
-      - PREVIEW_PORT=4321
-    ports:
-      - '4321:4321'
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ['CMD-SHELL', 'pgrep -f astro-supervisor > /dev/null || exit 1']
-      interval: 2s
-      timeout: 5s
-      retries: 30
-      start_period: 5s
-
   backend:
     pull_policy: always
     build:
@@ -45,10 +18,13 @@ services:
       - blog-net
     ports:
       - '8080:8080'
+      - '4321:4321'
     volumes:
-      - astro-sites:/app/astro-sites:ro
+      # Writable now: the backend scaffolds sites and runs `pnpm dev` in-process.
+      - astro-sites:/app/astro-sites
     environment:
       - SITES_DIR=/app/astro-sites
+      - PREVIEW_PORT=4321
     develop:
       watch:
         - action: sync

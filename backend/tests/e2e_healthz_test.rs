@@ -6,6 +6,7 @@ use backend::config::Config;
 async fn healthz_endpoint_return_healthy_status() {
     let config = Config {
         sites_dir: std::path::PathBuf::from("/tmp"),
+        preview_port: 4321,
     };
 
     let (app, state) = create_app(config);
@@ -21,5 +22,5 @@ async fn healthz_endpoint_return_healthy_status() {
     assert!(body["meta"]["requestId"].is_string());
     assert_eq!(body["meta"]["serverName"], "backend");
 
-    assert!(state.active_preview.lock().await.is_none())
+    assert!(state.lock_preview().await.is_none())
 }
