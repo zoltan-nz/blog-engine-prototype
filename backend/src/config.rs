@@ -7,10 +7,16 @@ pub struct Config {
     pub sites_dir: PathBuf,
     #[serde(default = "default_preview_port")]
     pub preview_port: u16,
+    #[serde(default = "default_frontend_dir")]
+    pub frontend_dir: PathBuf,
 }
 
 fn default_sites_dir() -> PathBuf {
     PathBuf::from("/tmp/astro-sites")
+}
+
+fn default_frontend_dir() -> PathBuf {
+    PathBuf::from("../frontend/build")
 }
 
 const fn default_preview_port() -> u16 {

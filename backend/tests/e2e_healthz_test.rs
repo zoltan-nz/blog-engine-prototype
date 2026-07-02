@@ -7,6 +7,7 @@ async fn healthz_endpoint_return_healthy_status() {
     let config = Config {
         sites_dir: std::path::PathBuf::from("/tmp"),
         preview_port: 4321,
+        frontend_dir: std::path::PathBuf::from("/tmp"),
     };
 
     let (app, state) = create_app(config);

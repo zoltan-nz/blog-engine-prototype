@@ -1,61 +1,62 @@
 [tools]
-# Hey is a performance management software
-hey = "latest"
 node = "latest"
 pnpm = "latest"
 rust = "latest"
 
 # =============================================================================
-# Compose Tasks (Primary Workflow)
+# Dev (run in separate terminals)
 # =============================================================================
 
-[tasks.up]
-description = "Start all services"
-run = "docker compose up --remove-orphans --build"
+[tasks.backend]
+description = "Start backend with hot reload"
+run = "cargo watch -x 'run'"
+dir = "backend"
 
-[tasks.up-d]
-description = "Start all services detached"
-run = "docker compose up --build --remove-orphans -d --wait"
-
-[tasks.up-watch]
-description = "Start all services with file watching"
-run = "docker compose up --remove-orphans --build --renew-anon-volumes --watch"
-
-[tasks.down]
-description = "Stop and remove compose stack"
-run = "docker compose down --remove-orphans --volumes"
-
-[tasks.logs]
-description = "Follow compose logs"
-run = "docker compose logs -f"
+[tasks.frontend]
+description = "Start frontend dev server"
+run = "pnpm dev"
+dir = "frontend"
 
 # =============================================================================
-# Integration Tests (Playwright - runs outside compose)
+# Build
+# =============================================================================
+
+[tasks.build-frontend]
+description = "Build frontend SPA for production"
+run = "pnpm build"
+dir = "frontend"
+
+[tasks.build]
+description = "Build backend (expects frontend already built)"
+run = "cargo build"
+dir = "backend"
+
+# =============================================================================
+# Integration Tests (Playwright starts backend via webServer)
 # =============================================================================
 
 [tasks.test]
-description = "E2E integration tests — starts stack, runs Playwright, tears down"
-dir = "integration-tests"
-depends = ["up-d"]
+description = "Build frontend then run Playwright"
+depends = ["build-frontend"]
 run = "pnpm run test"
-depends_post = ["down"]
+dir = "integration-tests"
 
 # =============================================================================
-# Unit Tests (run outside compose, watch mode)
+# Unit Tests
 # =============================================================================
 
 [tasks.test-unit-backend]
-description = "Run Rust backend unit tests in watch mode"
+description = "Run Rust unit tests in watch mode"
 run = "cargo watch -x test"
 dir = "backend"
 
 [tasks.test-unit-frontend]
-description = "Run SvelteKit unit tests in watch mode"
+description = "Run Vitest in watch mode"
 run = "pnpm exec vitest --watch"
 dir = "frontend"
 
 [tasks.test-unit]
-description = "Run all unit tests"
+description = "Run all unit tests once"
 run = """
 echo "=== Running all unit tests ===" && \
 (cd backend && cargo test) && \
@@ -64,41 +65,9 @@ echo "=== All unit tests passed ==="
 """
 
 # =============================================================================
-# Container Stats
-# =============================================================================
-
-[tasks.stats]
-description = "Show container resource usage"
-run = """
-echo "=== Image Sizes ===" && docker image ls --format "table {{.Repository}}\t{{.Size}}" | grep -E "(backend|frontend|REPOSITORY)" && echo "" && echo "=== Memory Usage ===" && docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" 2>/dev/null || echo "No running containers"
-"""
-
-# =============================================================================
-# Production Compose Stack
-# =============================================================================
-
-[tasks.prod-up]
-description = "Start production stack"
-run = "docker compose -f compose.prod.yaml up --build"
-
-[tasks.prod-down]
-description = "Stop production stack"
-run = "docker compose -f compose.prod.yaml down"
-
-# =============================================================================
-# Local Dev Tasks
+# Formatting
 # =============================================================================
 
 [tasks.format]
-description = "Format code in all services"
+description = "Format all code"
 run = "pnpm format && (cd backend && cargo fmt)"
-
-[tasks.dev-backend]
-description = "Start Rust backend locally (hot reload)"
-run = "cargo watch -x 'run'"
-dir = "backend"
-
-[tasks.build]
-description = "Run cargo build with TypeScript binding generator"
-run = "cargo build"
-dir = "backend"
