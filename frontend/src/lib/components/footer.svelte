@@ -1,10 +1,32 @@
 <script lang="ts">
-  import { createHealthz } from "../../generated-api.js";
-  import { backendURL } from "$lib/api/fetch-with-base-url.js";
+  import { backendUrl, getSocket } from "$lib/state/socket.svelte";
   import ThemeSelector from "./theme-selector/theme-selector.svelte";
   import FontSelector from "./font-selector/font-selector.svelte";
 
-  const checkConnection = createHealthz();
+  const socket = getSocket();
+
+  interface HealthMeta {
+    serverName: string;
+    version: string;
+  }
+
+  // One-shot identity fetch; liveness comes from the WS status, which is
+  // reactive and reconnect-aware.
+  async function fetchHealthMeta(): Promise<HealthMeta | null> {
+    try {
+      const response = await fetch(`${backendUrl}/healthz`);
+      if (!response.ok) return null;
+      const body = await response.json();
+      return { serverName: body.meta.serverName, version: body.meta.version };
+    } catch {
+      return null;
+    }
+  }
+
+  let health = $state<HealthMeta | null>(null);
+  fetchHealthMeta().then((meta) => (health = meta));
+
+  let connected = $derived(socket.status === "open");
 </script>
 
 <footer
@@ -16,54 +38,22 @@
   >
     <ThemeSelector />
     <FontSelector />
-    <span class="text-surface-600-400">Backend: {backendURL}</span>
+    <span class="text-surface-600-400">Backend: {backendUrl}</span>
     <span class="text-surface-600-400">
-      Server Name: {checkConnection.data?.data.meta.serverName}
+      Server Name: {health?.serverName ?? "—"}
     </span>
     <span class="text-surface-600-400">
-      Version: {checkConnection.data?.data.meta.version}
+      Version: {health?.version ?? "—"}
     </span>
-    <button
-      class="flex items-center gap-2 transition-opacity hover:opacity-80"
-      onclick={() => checkConnection.refetch()}
-      disabled={checkConnection.isLoading}
-      title={checkConnection.isSuccess ? "Connected" : "Disconnected"}
-    >
-      {#if checkConnection.isLoading}
-        <svg
-          class="size-3 animate-spin"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          ></path>
-        </svg>
-      {:else}
-        <span
-          class="size-3 rounded-full {checkConnection.isSuccess
-            ? 'bg-success-500'
-            : 'bg-error-500'}"
-        ></span>
-      {/if}
+    <span class="flex items-center gap-2" title={socket.status}>
+      <span
+        class="size-3 rounded-full {connected
+          ? 'bg-success-500'
+          : 'bg-error-500'}"
+      ></span>
       <span class="text-surface-600-400">
-        {checkConnection.isLoading
-          ? "Checking..."
-          : checkConnection.isSuccess
-            ? "Connected"
-            : "Disconnected"}
+        {connected ? "Connected" : "Disconnected"}
       </span>
-    </button>
+    </span>
   </div>
 </footer>

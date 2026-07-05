@@ -3,27 +3,29 @@
 pub mod app;
 pub mod astro;
 pub mod config;
+pub mod fsm;
 pub mod handlers;
 pub mod routes;
 pub mod state;
 pub mod telemetry;
 pub mod types;
+pub mod ws;
 
 use serde::Serialize;
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
-// Shared meta infrastructure
+// Shared meta infrastructure (HTTP healthz only; the WS protocol uses
+// `types::WsEnvelope`)
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum MetaServerName {
     Backend,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Meta {
     pub timestamp: String,

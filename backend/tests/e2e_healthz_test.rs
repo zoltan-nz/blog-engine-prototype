@@ -1,11 +1,13 @@
 use axum_test::TestServer;
 use backend::app::create_app;
 use backend::config::Config;
+use tempfile::TempDir;
 
 #[tokio::test]
 async fn healthz_endpoint_return_healthy_status() {
+    let sites = TempDir::new().unwrap();
     let config = Config {
-        sites_dir: std::path::PathBuf::from("/tmp"),
+        sites_dir: sites.path().to_path_buf(),
         preview_port: 4321,
         frontend_dir: std::path::PathBuf::from("/tmp"),
     };

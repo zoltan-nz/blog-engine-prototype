@@ -7,9 +7,19 @@ edition = "2024"
 name = "blog-engine-api"
 path = "src/main.rs"
 
+[[bin]]
+name = "export-types"
+path = "src/bin/export-types.rs"
+
+[features]
+# Embed the built SPA (../frontend/build) into the binary. Release/single-binary
+# builds enable this; dev and tests serve from disk via ServeDir instead so the
+# backend compiles without a frontend build present.
+embed = ["dep:rust-embed", "dep:mime_guess"]
+
 [dependencies]
 axum = { version = "0.8.9", features = ["ws", "http2"] }
-tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "rt", "sync", "time", "process", "net"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "rt", "sync", "time", "process", "net", "io-util"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tower = "0.5.3"
@@ -18,12 +28,13 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
-utoipa = { version = "5.5.0", features = ["axum_extras", "auto_into_responses", "yaml", "uuid", "chrono"] }
-utoipa-axum = "0.2.0"
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+specta = { version = "1.0.5", features = ["export", "typescript"] }
+futures-util = "0.3.31"
 thiserror = "2.0.12"
 dotenvy = "0.15.7"
 envy = "0.4.2"
+rust-embed = { version = "8.7.2", optional = true }
+mime_guess = { version = "2.0.5", optional = true }
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

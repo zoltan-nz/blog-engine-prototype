@@ -6,9 +6,11 @@
   or other HTML elements. Place all `{@const}` declarations at the top of the block they belong to.
 - **HTTP 204 and `response.json()`:** a 204 No Content response has no body. Calling `.json()` on it throws
   `SyntaxError`. Guard all fetch wrappers: `response.status === 204 ? null : await response.json()`.
-- **Mutation hooks over raw fetch functions:** use `createDeleteSite()`, `createPreviewSite()` etc. (TanStack Query
-  mutations) rather than the raw `deleteSite()` / `previewSite()` functions — mutations give `isPending`, error state,
-  and integrate with the query cache.
+- **Server state comes from the WebSocket store:** use `getSocket()` from `$lib/state/socket.svelte` — commands
+  (`createSite()`, `deleteSite()`, `startPreview()`, …) return a `correlation_id`, and state updates arrive as
+  broadcast events into `socket.sites` / `socket.preview`. Never fetch server state over HTTP (only `/healthz` is HTTP).
+- **Wire types are generated:** import from `$lib/types/bindings.js`; regenerate with `mise run export-types`
+  after changing `backend/src/types.rs`. Never edit `bindings.ts` by hand.
 
 ## Environment Gotchas
 

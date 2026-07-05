@@ -1,51 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
-test.describe('Sites - API', () => {
-  test('GET /sites returns empty list initially', async ({ request }) => {
-    const response = await request.get(`${BACKEND_URL}/sites`);
-    expect(response.status()).toBe(200);
-
-    const body = await response.json();
-    expect(body).toHaveProperty('data');
-    expect(body).toHaveProperty('meta');
-    expect(Array.isArray(body.data)).toBe(true);
-  });
-
-  test('POST /sites creates a site and returns it with a git URL', async ({ request }) => {
-    test.setTimeout(120_000); // npm create astro takes time
-
-    const slug = `api-test-${Date.now()}`;
-    const response = await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'API Test Blog', slug },
-    });
-    expect(response.status()).toBe(201);
-
-    const body = await response.json();
-    expect(body).toHaveProperty('data');
-    expect(body).toHaveProperty('meta');
-    expect(body.data).toMatchObject({ name: 'API Test Blog', slug });
-    expect(body.data).toHaveProperty('gitUrl');
-  });
-
-  test('created site appears in GET /sites list', async ({ request }) => {
-    test.setTimeout(120_000);
-
-    await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'List Test Blog', slug: 'list-test-blog' },
-    });
-
-    const response = await request.get(`${BACKEND_URL}/sites`);
-    const body = await response.json();
-    const site = body.data.find((s: { slug: string }) => s.slug === 'list-test-blog');
-    expect(site).toBeDefined();
-    expect(site.name).toBe('List Test Blog');
-  });
-});
-
-test.describe('Sites - UI', () => {
+test.describe('Sites - UI basics', () => {
   test('home page shows "Create a new blog" button', async ({ page }) => {
     await page.goto(FRONTEND_URL);
     await expect(page.getByRole('button', { name: 'Create a new blog' })).toBeVisible();
@@ -58,139 +15,67 @@ test.describe('Sites - UI', () => {
     await expect(page.getByLabel('Blog name')).toBeVisible();
   });
 
-  test('creating a blog via the UI shows the new site in the list', async ({ page }) => {
+  test('footer shows Connected once the socket is open', async ({ page }) => {
+    await page.goto(FRONTEND_URL);
+    await expect(page.getByTestId('footer')).toContainText('Connected');
+  });
+});
+
+// One site flows through its whole lifecycle: create → preview → stop → destroy.
+// Serial because scaffolding (create-astro + pnpm install) is the expensive step
+// and every later test reuses it.
+test.describe.serial('Sites - full lifecycle over WS', () => {
+  const BLOG_NAME = `Lifecycle Test ${Date.now()}`;
+  const SLUG_PATTERN = /lifecycle-test-\d+/;
+
+  test('creating a blog shows Scaffolding, then settles Ready', async ({ page }) => {
     test.setTimeout(300_000);
 
     await page.goto(FRONTEND_URL);
     await page.getByRole('button', { name: 'Create a new blog' }).click();
-    await page.getByLabel('Blog name').fill('UI Test Blog');
+    await page.getByLabel('Blog name').fill(BLOG_NAME);
     await page.getByRole('button', { name: 'Create', exact: true }).click();
 
-    await expect(page.getByText('UI Test Blog')).toBeVisible({ timeout: 280_000 });
-  });
-});
+    // Card appears immediately in Creating state (broadcast, not refetch).
+    const card = page.locator('li', { hasText: BLOG_NAME });
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(card).toContainText(SLUG_PATTERN);
 
-test.describe('Sites - Preview', () => {
-  // Ensure a site named 'preview-test' exists before running these tests.
-  // The slug is fixed so this beforeAll is idempotent across retries.
-  // Timeout is passed as the second arg — test.setTimeout() inside beforeAll does not apply to the hook itself.
-  test.beforeAll(async ({ request }) => {
-    const resp = await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'Preview Test Blog', slug: 'preview-test' },
-    });
-    // 201 = created; 409 = already exists (idempotent). Any other status is a setup failure.
-    expect([201, 409]).toContain(resp.status());
-  }, 120_000); // 120s: pnpm create astro is slow
-
-  test.afterEach(async ({ request }) => {
-    // Stop the active preview server so each test starts from a clean state.
-    // Intentionally unconditional — DELETE /preview is idempotent (204 even if nothing is running).
-    await request.delete(`${BACKEND_URL}/preview`);
+    // Scaffold finishes → badge disappears, actions enabled.
+    await expect(card.getByText('Scaffolding…')).toBeHidden({ timeout: 280_000 });
+    await expect(card.getByRole('button', { name: /Start Preview/ })).toBeEnabled();
   });
 
-  test('POST /sites/:slug/preview returns previewUrl', async ({ request }) => {
-    test.setTimeout(60_000);
-    const resp = await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
-    expect(resp.status()).toBe(200);
-    const body = await resp.json();
-    expect(body.data).toHaveProperty('previewUrl');
-    expect(body.data.previewUrl).toContain('4321');
-  });
+  test('starting a preview shows the Live badge with a working URL', async ({ page }) => {
+    test.setTimeout(120_000);
 
-  test('previewUrl actually serves the Astro site', async ({ request }) => {
-    test.setTimeout(60_000);
-    const body = await (await request.post(`${BACKEND_URL}/sites/preview-test/preview`)).json();
-    const preview = await request.get(body.data.previewUrl);
-    expect(preview.status()).toBe(200);
-  });
-
-  test('GET /sites shows previewUrl set for active site', async ({ request }) => {
-    test.setTimeout(60_000);
-    await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
-    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
-    const active = sites.find((s: { slug: string }) => s.slug === 'preview-test');
-    expect(active.previewUrl).toBeTruthy();
-    const others = sites.filter((s: { slug: string }) => s.slug !== 'preview-test');
-    others.forEach((s: { previewUrl: string | null }) => expect(s.previewUrl).toBeNull());
-  });
-
-  test('UI: site card shows "▶ Live" badge when preview is active', async ({ page, request }) => {
-    test.setTimeout(60_000);
-    await request.post(`${BACKEND_URL}/sites/preview-test/preview`);
     await page.goto(FRONTEND_URL);
-    const badge = page.getByText('▶ Live');
-    await expect(badge).toBeVisible();
-  });
-});
+    const card = page.locator('li', { hasText: BLOG_NAME });
+    await card.getByRole('button', { name: /Start Preview/ }).click();
 
-test.describe('Sites - Delete', () => {
-  // Fixed slug created once; idempotent across retries and reruns.
-  test.beforeAll(async ({ request }) => {
-    const resp = await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'Delete API Test', slug: 'delete-api-test' },
-    });
-    expect([201, 409]).toContain(resp.status());
-  }, 120_000);
+    const live = card.getByRole('link', { name: 'Live' });
+    await expect(live).toBeVisible({ timeout: 90_000 });
 
-  test('DELETE /sites/:slug returns 404 for unknown slug', async ({ request }) => {
-    const resp = await request.delete(`${BACKEND_URL}/sites/does-not-exist-xyz`);
-    expect(resp.status()).toBe(404);
+    const previewUrl = await live.getAttribute('href');
+    expect(previewUrl).toBeTruthy();
+    const response = await page.request.get(previewUrl!);
+    expect(response.status()).toBe(200);
   });
 
-  test('DELETE /sites/:slug returns 204 and removes the site from the list', async ({ request }) => {
-    const resp = await request.delete(`${BACKEND_URL}/sites/delete-api-test`);
-    expect(resp.status()).toBe(204);
-
-    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
-    const gone = sites.find((s: { slug: string }) => s.slug === 'delete-api-test');
-    expect(gone).toBeUndefined();
+  test('stopping the preview removes the Live badge', async ({ page }) => {
+    await page.goto(FRONTEND_URL);
+    const card = page.locator('li', { hasText: BLOG_NAME });
+    await card.getByRole('button', { name: 'Stop Preview' }).click();
+    await expect(card.getByRole('link', { name: 'Live' })).toBeHidden({ timeout: 30_000 });
   });
 
-  test('DELETE /sites/:slug stops an active preview before deleting', async ({ request }) => {
-    // Create a fresh site, start a preview, then delete — preview must not block deletion.
-    test.setTimeout(240_000); // scaffold + preview start
+  test('destroying the blog removes the card', async ({ page }) => {
+    await page.goto(FRONTEND_URL);
+    const card = page.locator('li', { hasText: BLOG_NAME });
 
-    const slug = 'delete-with-preview-test';
-    const create = await request.post(`${BACKEND_URL}/sites`, {
-      data: { name: 'Delete With Preview Test', slug },
-    });
-    expect([201, 409]).toContain(create.status());
+    page.on('dialog', (dialog) => dialog.accept());
+    await card.getByRole('button', { name: 'Destroy' }).click();
 
-    const preview = await request.post(`${BACKEND_URL}/sites/${slug}/preview`);
-    expect(preview.status()).toBe(200);
-
-    const del = await request.delete(`${BACKEND_URL}/sites/${slug}`);
-    expect(del.status()).toBe(204);
-
-    const sites = (await (await request.get(`${BACKEND_URL}/sites`)).json()).data;
-    expect(sites.find((s: { slug: string }) => s.slug === slug)).toBeUndefined();
-  });
-
-  test.describe('UI', () => {
-    // Separate slug so the API tests above don't consume what this test needs.
-    test.beforeAll(async ({ request }) => {
-      const resp = await request.post(`${BACKEND_URL}/sites`, {
-        data: { name: 'Delete UI Test', slug: 'delete-ui-test' },
-      });
-      expect([201, 409]).toContain(resp.status());
-    }, 120_000);
-
-    test('Destroy button removes the site from the list', async ({ page }) => {
-      // Override window.confirm before any page script runs so the Destroy dialog
-      // is auto-accepted without relying on the dialog event timing.
-      await page.addInitScript(() => {
-        (window as Window & { confirm: () => boolean }).confirm = () => true;
-      });
-      await page.goto(FRONTEND_URL);
-
-      const card = page.locator('li').filter({ hasText: 'Delete UI Test' });
-      await expect(card).toBeVisible({ timeout: 10_000 });
-
-      await card.getByRole('button', { name: 'Destroy' }).click();
-
-      await expect(page.locator('li').filter({ hasText: 'Delete UI Test' })).not.toBeVisible({
-        timeout: 15_000,
-      });
-    });
+    await expect(card).toBeHidden({ timeout: 30_000 });
   });
 });

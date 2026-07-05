@@ -1,87 +1,178 @@
-use serde::Deserialize;
-use serde::Serialize;
-use uuid::Uuid;
-use utoipa::ToSchema;
+//! Wire types for the WebSocket protocol. Every type here derives
+//! `specta::Type` and is exported to `frontend/src/lib/types/bindings.ts` by
+//! `bin/export-types.rs` — the FSM states double as wire types so backend and
+//! frontend share one state vocabulary.
+use serde::{Deserialize, Serialize};
+use specta::Type;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+/// Lifecycle of a managed Astro site. Transitions live in `fsm::site`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(tag = "type", content = "payload")]
+pub enum SiteState {
+    Creating,
+    Ready,
+    Building,
+    BuildFailed { reason: String },
+    Deleting,
+}
+
+/// Lifecycle of the (single) Astro dev-server preview. Transitions live in
+/// `fsm::preview`. `Starting` covers the TCP readiness poll window.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(tag = "type", content = "payload")]
+pub enum PreviewState {
+    Stopped,
+    Starting,
+    Running,
+    Stopping,
+    Failed { reason: String },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum LogStream {
     Stdout,
     Stderr,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum ErrorCode {
     SiteNotFound,
-    Conflict,
+    SiteAlreadyExists,
+    InvalidTransition,
     BuildFailed,
     PreviewTimeout,
     Internal,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+/// Client → server messages.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
     CreateSite { name: String, slug: String },
-    BuildSite { slug: String, force: bool },
-    StartPreview { slug: String, port: Option<u16> },
+    BuildSite { slug: String },
+    StartPreview { slug: String },
     StopPreview,
-    GetStatus { slug: String },
     DeleteSite { slug: String },
     Ping,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+/// A site as the frontend sees it: identity plus current FSM state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct SiteView {
+    pub slug: String,
+    pub name: String,
+    pub state: SiteState,
+}
+
+/// The preview as the frontend sees it. `slug` says which site is previewed;
+/// `url` is set only while `Running`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct PreviewView {
+    pub state: PreviewState,
+    pub slug: Option<String>,
+    pub url: Option<String>,
+}
+
+/// Server → client messages. `Snapshot` is sent on every connect — reconnect
+/// strategy is a fresh snapshot, never event replay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(tag = "type", content = "payload")]
 pub enum Event {
-    SiteCreated {
+    Snapshot {
+        sites: Vec<SiteView>,
+        preview: PreviewView,
+    },
+    SiteChanged(SiteView),
+    SiteRemoved {
         slug: String,
-        name: String,
     },
-    SiteDeleted,
-    BuildStarted {
-        build_id: Uuid,
-        slug: String,
-    },
-    BuildProgress {
-        build_id: Uuid,
-        phase: String,
-        percent: f32,
-    },
+    PreviewChanged(PreviewView),
     BuildLog {
-        build_id: Uuid,
+        slug: String,
         stream: LogStream,
         data: String,
     },
-    BuildCompleted {
-        build_id: Uuid,
-        duration_ms: u64,
-    },
-    BuildFailed {
-        build_id: Uuid,
-        error: String,
-        retryable: bool,
-    },
-    PreviewReady {
-        slug: String,
-        url: String,
-        port: u16,
-    },
-    PreviewStopped,
-    Pong,
     Error {
         code: ErrorCode,
         message: String,
-        command_id: Option<Uuid>,
+        correlation_id: Option<String>,
     },
+    Pong,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[allow(clippy::option_if_let_else)]
-pub struct Envelope<T> {
-    pub id: Uuid,
-    pub correlation_id: Option<Uuid>,  // links response to request
-    pub idempotency_key: Option<Uuid>, // client-generated; same across retries
-    pub sequence: u64,                 // monotonic; used for replay-from detection
-    pub timestamp: chrono::DateTime<chrono::Utc>,
-    pub payload: T,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(tag = "type", content = "payload")]
+pub enum WsMessage {
+    Command(Command),
+    Event(Event),
+}
+
+/// Lean envelope: timestamp + correlation id + flattened message. Commands
+/// carry a client-generated `correlation_id`; error events echo it back so the
+/// client can match failures to requests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct WsEnvelope {
+    pub unix_timestamp_us: i64,
+    pub correlation_id: String,
+
+    #[serde(flatten)]
+    pub message: WsMessage,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn envelope_flattens_message_tag_to_top_level() {
+        let envelope = WsEnvelope {
+            unix_timestamp_us: 42,
+            correlation_id: "abc".into(),
+            message: WsMessage::Event(Event::Pong),
+        };
+        let json = serde_json::to_value(&envelope).unwrap();
+        assert_eq!(json["type"], "Event");
+        assert_eq!(json["payload"]["type"], "Pong");
+        assert_eq!(json["correlation_id"], "abc");
+    }
+
+    #[test]
+    fn command_envelope_roundtrips_from_client_json() {
+        let raw = r#"{
+            "unix_timestamp_us": 0,
+            "correlation_id": "c-1",
+            "type": "Command",
+            "payload": { "type": "CreateSite", "payload": { "name": "My Blog", "slug": "my-blog" } }
+        }"#;
+        let envelope: WsEnvelope = serde_json::from_str(raw).unwrap();
+        assert_eq!(
+            envelope.message,
+            WsMessage::Command(Command::CreateSite {
+                name: "My Blog".into(),
+                slug: "my-blog".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn unit_command_deserializes_without_payload() {
+        let raw = r#"{
+            "unix_timestamp_us": 0,
+            "correlation_id": "c-2",
+            "type": "Command",
+            "payload": { "type": "Ping" }
+        }"#;
+        let envelope: WsEnvelope = serde_json::from_str(raw).unwrap();
+        assert_eq!(envelope.message, WsMessage::Command(Command::Ping));
+    }
+
+    #[test]
+    fn site_state_with_payload_serializes_tagged() {
+        let state = SiteState::BuildFailed {
+            reason: "boom".into(),
+        };
+        let json = serde_json::to_value(&state).unwrap();
+        assert_eq!(json["type"], "BuildFailed");
+        assert_eq!(json["payload"]["reason"], "boom");
+    }
 }

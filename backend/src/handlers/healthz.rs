@@ -4,23 +4,22 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Serialize;
 use tracing::trace;
-use utoipa::ToSchema;
 
-#[derive(Debug, Default, Clone, Copy, Serialize, ToSchema)]
+#[derive(Debug, Default, Clone, Copy, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     #[default]
     Healthy,
 }
 
-#[derive(Debug, Default, Serialize, ToSchema)]
+#[derive(Debug, Default, Serialize)]
 pub struct HealthData {
     status: HealthStatus,
     version: &'static str,
 }
 
 /// Response envelope for the health endpoint.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct HealthResponse {
     data: HealthData,
     meta: Meta,
@@ -35,13 +34,6 @@ impl HealthResponse {
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/healthz",
-    responses(
-        (status = 200, description = "Service is healthy", body = HealthResponse)
-    )
-)]
 pub async fn healthz() -> impl IntoResponse {
     trace!("Health check requested");
     let response = HealthResponse::new(HealthData {

@@ -103,7 +103,7 @@ mod tests {
     use tempfile::TempDir;
 
     fn make_state(sites_dir: &std::path::Path) -> Arc<AppState> {
-        Arc::new(AppState::new(sites_dir, 4321))
+        Arc::new(AppState::new(sites_dir, 4321, Vec::new()))
     }
 
     #[tokio::test]

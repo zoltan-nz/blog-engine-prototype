@@ -1,14 +1,18 @@
 <script lang="ts">
   import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
-  import type { CreateSiteRequest } from "../generated-api.js";
+  import { getSocket } from "$lib/state/socket.svelte";
+  import type { SiteView } from "$lib/types/bindings.js";
   import {
-    createCreateSite,
-    createDeleteSite,
-    createListSites,
-    createPreviewSite,
-    createStopPreview,
-  } from "../generated-api.js";
-  import { Loader, LoaderCircle, Trash2, Play, Square } from "@lucide/svelte";
+    Hammer,
+    Loader,
+    LoaderCircle,
+    Play,
+    Square,
+    Trash2,
+    X,
+  } from "@lucide/svelte";
+
+  const socket = getSocket();
 
   // Converts a blog name into a URL-safe slug (directory name + git repo name).
   // Rules: GitHub repo names allow [a-z0-9._-], max 100 chars.
@@ -21,49 +25,28 @@
       .slice(0, 100);
   }
 
-  const sitesQuery = createListSites();
-  const createSiteMutation = createCreateSite();
-  const previewMutation = createPreviewSite();
-  const stopPreviewMutation = createStopPreview();
-  const deleteSiteMutation = createDeleteSite();
-
-  let previewingSlug = $state<string | null>();
-  let deletingSlug = $state<string | null>(null);
-
   let dialogOpen = $state(false);
   let blogName = $state("");
   let slug = $derived(nameToSlug(blogName));
+
+  let previewBusy = $derived(
+    socket.preview.state.type === "Starting" ||
+      socket.preview.state.type === "Stopping",
+  );
 
   function openModal() {
     blogName = "";
     dialogOpen = true;
   }
 
-  async function handleSubmit(e: SubmitEvent) {
+  function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     if (!blogName.trim() || !slug) return;
-
-    const body: CreateSiteRequest = { name: blogName.trim(), slug };
-    await createSiteMutation.mutateAsync({ data: body });
-
+    socket.createSite(blogName.trim(), slug);
     dialogOpen = false;
-    await sitesQuery.refetch();
   }
 
-  async function handlePreview(slug: string) {
-    previewingSlug = slug;
-    try {
-      const result = await previewMutation.mutateAsync({ slug });
-      if (result.status === 200 && result.data.data.previewUrl) {
-        window.open(result.data.data.previewUrl, "_blank");
-        await sitesQuery.refetch();
-      }
-    } finally {
-      previewingSlug = null;
-    }
-  }
-
-  async function handleDelete(slug: string) {
+  function handleDelete(site: SiteView) {
     if (
       !confirm(
         "Are you sure you want to destroy this blog? This action cannot be undone.",
@@ -71,13 +54,11 @@
     ) {
       return;
     }
-    deletingSlug = slug;
-    try {
-      await deleteSiteMutation.mutateAsync({ slug });
-      await sitesQuery.refetch();
-    } finally {
-      deletingSlug = null;
-    }
+    socket.deleteSite(site.slug);
+  }
+
+  function isPreviewedSite(site: SiteView): boolean {
+    return socket.preview.slug === site.slug;
   }
 </script>
 
@@ -92,104 +73,146 @@
     </button>
   </div>
 
-  <!-- Site list -->
-  {#if sitesQuery.isLoading}
-    <div class="flex justify-center py-12">
-      <svg
-        class="size-12 animate-spin text-primary-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
+  {#if socket.lastError}
+    <div
+      class="mb-4 flex items-center justify-between rounded-container preset-tonal-error p-4"
+    >
+      <span>
+        <strong>{socket.lastError.code}</strong>: {socket.lastError.message}
+      </span>
+      <button
+        class="btn-icon btn-sm"
+        onclick={() => socket.dismissError()}
+        aria-label="Dismiss error"
       >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        ></path>
-      </svg>
+        <X size={16} />
+      </button>
     </div>
-  {:else if sitesQuery.isError}
-    <div class="rounded-container preset-tonal-error p-4">
-      <span>Failed to load sites. Is the backend running?</span>
+  {/if}
+
+  {#if socket.status !== "open"}
+    <div class="mb-4 rounded-container preset-tonal-warning p-4">
+      <span>
+        {socket.status === "connecting"
+          ? "Connecting to backend…"
+          : "Connection lost — reconnecting…"}
+      </span>
+    </div>
+  {/if}
+
+  <!-- Site list -->
+  {#if socket.sites.length === 0}
+    <div class="card rounded-container preset-tonal-surface py-16 text-center">
+      <p class="text-surface-600-400">No blogs yet. Create your first one!</p>
     </div>
   {:else}
-    {@const sites = sitesQuery.data?.data.data ?? []}
-    {#if sites.length === 0}
-      <div
-        class="card rounded-container preset-tonal-surface py-16 text-center"
-      >
-        <p class="text-surface-600-400">No blogs yet. Create your first one!</p>
-      </div>
-    {:else}
-      <ul class="grid gap-4 sm:grid-cols-2">
-        {#each sites as site (site.slug)}
-          {@const isPreviewLive = site.previewUrl !== null && site.previewUrl !== ""}
-          {@const isPreviewingStarted = previewingSlug === site.slug}
-          {@const isDeleting = deletingSlug === site.slug}
-          <li
-            class="card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-sm"
-          >
-            <div class="p-4">
-              <div class="flex items-start justify-between">
-                <div>
-                  <h2 class="flex items-center gap-2 text-xl font-bold">
-                    {site.name}
-                    {#if isPreviewLive}
-                      <a href={site.previewUrl} target="_blank" class="badge preset-filled-success-500 text-xs">Live</a>
-                    {/if}
-                  </h2>
-                  <p class="font-mono text-sm text-surface-600-400">
-                    {site.slug}
-                  </p>
-                  <p class="text-surface-500-400 truncate text-xs">
-                    {site.gitUrl}
-                  </p>
-                </div>
+    <ul class="grid gap-4 sm:grid-cols-2">
+      {#each socket.sites as site (site.slug)}
+        {@const busy =
+          site.state.type === "Creating" || site.state.type === "Deleting"}
+        {@const previewed = isPreviewedSite(site)}
+        {@const isLive = previewed && socket.preview.state.type === "Running"}
+        {@const isStarting =
+          previewed && socket.preview.state.type === "Starting"}
+        <li
+          class="card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-sm"
+        >
+          <div class="p-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <h2 class="flex items-center gap-2 text-xl font-bold">
+                  {site.name}
+                  {#if site.state.type === "Creating"}
+                    <span class="badge preset-tonal-surface text-xs">
+                      <LoaderCircle size={12} class="animate-spin" />
+                      Scaffolding…
+                    </span>
+                  {:else if site.state.type === "Building"}
+                    <span class="badge preset-tonal-primary text-xs">
+                      <LoaderCircle size={12} class="animate-spin" />
+                      Building…
+                    </span>
+                  {:else if site.state.type === "BuildFailed"}
+                    <span
+                      class="badge preset-filled-error-500 text-xs"
+                      title={site.state.payload.reason}
+                    >
+                      Build failed
+                    </span>
+                  {:else if site.state.type === "Deleting"}
+                    <span class="badge preset-tonal-surface text-xs">
+                      <LoaderCircle size={12} class="animate-spin" />
+                      Deleting…
+                    </span>
+                  {/if}
+                  {#if isLive && socket.preview.url}
+                    <a
+                      href={socket.preview.url}
+                      target="_blank"
+                      class="badge preset-filled-success-500 text-xs"
+                    >
+                      Live
+                    </a>
+                  {/if}
+                </h2>
+                <p class="font-mono text-sm text-surface-600-400">
+                  {site.slug}
+                </p>
               </div>
-              <div class="mt-4 flex gap-2">
+            </div>
+            <div class="mt-4 flex gap-2">
+              {#if isLive}
                 <button
                   class="btn preset-outlined-surface-300-700 btn-sm"
-                  disabled={isPreviewingStarted}
-                  onclick={() => handlePreview(site.slug)}
+                  disabled={previewBusy && !isLive}
+                  onclick={() => socket.stopPreview()}
                 >
-                  {#if isPreviewingStarted}
+                  <Square size={16} />Stop Preview
+                </button>
+              {:else}
+                <button
+                  class="btn preset-outlined-surface-300-700 btn-sm"
+                  disabled={busy ||
+                    previewBusy ||
+                    site.state.type === "Building"}
+                  onclick={() => socket.startPreview(site.slug)}
+                >
+                  {#if isStarting}
                     <LoaderCircle size={16} class="animate-spin" />
-                    Building preview...
-                  {/if}
-                  {#if isPreviewLive}
-                    <Square size={16} />Stop Preview
-                    {:else}
+                    Starting preview…
+                  {:else}
                     <Play size={16} />Start Preview
                   {/if}
                 </button>
-                <div class="ml-auto">
-                  <button
-                    onclick={() => handleDelete(site.slug)}
-                    disabled={isDeleting}
-                    class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
-                  >
-                    {#if isDeleting}
-                      <Loader size={16} class="animate-spin" />
-                    {:else}
-                      <Trash2 size={16} />
-                    {/if}
-                    Destroy
-                  </button>
-                </div>
+              {/if}
+              <button
+                class="btn preset-outlined-surface-300-700 btn-sm"
+                disabled={busy ||
+                  site.state.type === "Building" ||
+                  site.state.type === "Creating"}
+                onclick={() => socket.buildSite(site.slug)}
+              >
+                <Hammer size={16} />Build
+              </button>
+              <div class="ml-auto">
+                <button
+                  onclick={() => handleDelete(site)}
+                  disabled={busy || site.state.type === "Building"}
+                  class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
+                >
+                  {#if site.state.type === "Deleting"}
+                    <Loader size={16} class="animate-spin" />
+                  {:else}
+                    <Trash2 size={16} />
+                  {/if}
+                  Destroy
+                </button>
               </div>
             </div>
-          </li>
-        {/each}
-      </ul>
-    {/if}
+          </div>
+        </li>
+      {/each}
+    </ul>
   {/if}
 </div>
 
@@ -232,12 +255,6 @@
             </p>
           </label>
 
-          {#if createSiteMutation.isError}
-            <div class="rounded-container preset-tonal-error p-3 text-sm">
-              Failed to create blog. Please try again.
-            </div>
-          {/if}
-
           <footer class="flex justify-end gap-2">
             <Dialog.CloseTrigger class="btn preset-tonal-surface">
               Cancel
@@ -245,33 +262,9 @@
             <button
               type="submit"
               class="btn preset-filled-primary-500"
-              disabled={!blogName.trim() || createSiteMutation.isPending}
+              disabled={!blogName.trim()}
             >
-              {#if createSiteMutation.isPending}
-                <svg
-                  class="size-4 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                Creating…
-              {:else}
-                Create
-              {/if}
+              Create
             </button>
           </footer>
         </form>

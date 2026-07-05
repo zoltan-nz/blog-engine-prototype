@@ -1,17 +1,17 @@
 # Frontend Svelte
 
-Generated with Svelte Kit generator `sv`.
+Generated with Svelte Kit generator `sv`. Static SPA (adapter-static), served
+by the Rust backend.
 
-## Developing
-
-Using `orval` to generate API code from the Swagger Open API specification.
-The generated code is TanStack Svelte Query compatible.
+All server state arrives over the typed WebSocket protocol
+(`src/lib/state/socket.svelte.ts`); the types in `src/lib/types/bindings.ts`
+are generated from the Rust wire types — never edit them by hand:
 
 ```sh
-pnpm run generate
+mise run export-types
 ```
 
-Run the dev server
+Run the dev server (expects the backend on :8080):
 
 ```sh
 pnpm run dev
@@ -30,12 +30,9 @@ pnpm run build
 
 You can preview the production build with `pnpm run preview`.
 
-## Connect REST API with Svelte Kit, the typesafe way
+## Testing
 
-Libraries:
-
-- tanstack DB
-- orval
-- zod
-- msw
--
+```sh
+pnpm exec vitest run    # component + socket-reducer unit tests
+pnpm run check          # svelte-check
+```

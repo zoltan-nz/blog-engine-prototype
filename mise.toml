@@ -9,13 +9,18 @@ rust = "latest"
 
 [tasks.backend]
 description = "Start backend with hot reload"
-run = "cargo watch -x 'run'"
+run = "cargo watch -x 'run --bin blog-engine-api'"
 dir = "backend"
 
 [tasks.frontend]
 description = "Start frontend dev server"
 run = "pnpm dev"
 dir = "frontend"
+
+[tasks.types]
+description = "Update types"
+run = "cargo watch -x 'run --bin export-types'"
+dir = "backend"
 
 # =============================================================================
 # Build
@@ -27,8 +32,18 @@ run = "pnpm build"
 dir = "frontend"
 
 [tasks.build]
-description = "Build backend (expects frontend already built)"
-run = "cargo build"
+description = "Build single release binary with the SPA embedded"
+depends = ["build-frontend"]
+run = "cargo build --release --features embed"
+dir = "backend"
+
+# =============================================================================
+# Type Generation (Rust -> TypeScript via specta)
+# =============================================================================
+
+[tasks.export-types]
+description = "Regenerate frontend/src/lib/types/bindings.ts from Rust wire types"
+run = "cargo run --bin export-types"
 dir = "backend"
 
 # =============================================================================

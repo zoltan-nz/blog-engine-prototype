@@ -30,16 +30,41 @@ pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AstroError> {
     Ok(sites_manifest.sites)
 }
 
+/// Runs `program` with `args` in `dir`, mapping every failure to
+/// [`AstroError::CommandFailed`] naming the program. A spawn error (typically
+/// the program missing from `PATH`) raises the same ENOENT as a missing file,
+/// so letting it bubble up as `Io` would surface as an unactionable
+/// "Internal: No such file or directory".
+async fn run_command(program: &str, args: &[&str], dir: &Path) -> Result<(), AstroError> {
+    let status = tokio::process::Command::new(program)
+        .args(args)
+        .current_dir(dir)
+        .status()
+        .await
+        .map_err(|e| AstroError::CommandFailed(format!("{program}: {e}")))?;
+
+    if !status.success() {
+        return Err(AstroError::CommandFailed(format!(
+            "{program} exited with {status}"
+        )));
+    }
+    Ok(())
+}
+
 /// Scaffolds a minimal Astro project in `site_dir` and installs dependencies.
 ///
 /// Runs sequentially:
-///   1. `create-astro . --template minimal --no-git --yes --skip-houston --no-install`
+///   1. `pnpm create astro@latest . --template minimal --no-git --yes --skip-houston --no-install`
 ///   2. `pnpm install`
 ///
-/// Both commands are assumed to be on `PATH` (Node.js + pnpm must be installed).
+/// Only `pnpm` (plus Node.js) must be on `PATH`; pnpm fetches the scaffolder
+/// itself, so no global `create-astro` install is required.
 pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
-    let create = tokio::process::Command::new("create-astro")
-        .args([
+    run_command(
+        "pnpm",
+        &[
+            "create",
+            "astro@latest",
             ".",
             "--template",
             "minimal",
@@ -47,16 +72,10 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
             "--yes",
             "--skip-houston",
             "--no-install",
-        ])
-        .current_dir(site_dir)
-        .status()
-        .await?;
-
-    if !create.success() {
-        return Err(AstroError::CommandFailed(format!(
-            "create-astro exited with {create}"
-        )));
-    }
+        ],
+        site_dir,
+    )
+    .await?;
 
     // pnpm v10+ blocks build scripts by default. esbuild and sharp are native binaries
     // required by Vite/Astro — without this file pnpm install exits with ERR_PNPM_IGNORED_BUILDS.
@@ -65,17 +84,7 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
         "allowBuilds:\n  esbuild: true\n  sharp: true\nonlyBuiltDependencies:\n  - esbuild\n  - sharp\n",
     )?;
 
-    let install = tokio::process::Command::new("pnpm")
-        .args(["install"])
-        .current_dir(site_dir)
-        .status()
-        .await?;
-
-    if !install.success() {
-        return Err(AstroError::CommandFailed(format!(
-            "pnpm install exited with {install}"
-        )));
-    }
+    run_command("pnpm", &["install"], site_dir).await?;
 
     tracing::info!(dir = %site_dir.display(), "Astro project scaffolded");
     Ok(())
@@ -181,6 +190,29 @@ mod tests {
         assert_eq!(result[0].name, "My Site");
         assert_eq!(result[0].folder, "my-site");
         assert_eq!(result[0].git_url, "");
+    }
+
+    #[tokio::test]
+    async fn run_command_maps_missing_program_to_command_failed_naming_it() {
+        let dir = TempDir::new().unwrap();
+
+        let result = run_command("definitely-not-installed-xyz", &[], dir.path()).await;
+
+        match result {
+            Err(AstroError::CommandFailed(message)) => {
+                assert!(message.contains("definitely-not-installed-xyz"));
+            }
+            other => panic!("expected CommandFailed, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn run_command_maps_nonzero_exit_to_command_failed() {
+        let dir = TempDir::new().unwrap();
+
+        let result = run_command("false", &[], dir.path()).await;
+
+        assert!(matches!(result, Err(AstroError::CommandFailed(_))));
     }
 
     #[test]
