@@ -5,8 +5,7 @@ use crate::astro::error::AstroError;
 use crate::state::{ActivePreview, AppState};
 
 /// Spawns `pnpm dev --port <port>` in the site's directory and waits until the
-/// port accepts connections (max 30s). On success the running child is stored in
-/// `state.preview` and the preview URL is returned.
+/// port accepts connections (max 30s).
 ///
 /// Lock discipline: the preview mutex is held only while claiming the slot and
 /// spawning the child, then released before the readiness poll. Holding it across
@@ -14,7 +13,7 @@ use crate::state::{ActivePreview, AppState};
 /// e.g. `list_sites`. (rust-async: never hold a lock across an await you don't
 /// need to.)
 ///
-/// Errors:
+/// # Errors
 /// - `PreviewAlreadyRunning` — another site is already being previewed
 /// - `SiteNotFound` — `sites_dir/<slug>` does not exist
 /// - `DevServerTimeout` — port never became reachable within the deadline
@@ -87,6 +86,8 @@ pub async fn start_preview(
 
 /// Kills the running preview process if one exists. Idempotent — returns
 /// `Ok(())` even when nothing is running.
+///
+/// # Errors
 pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AstroError> {
     // Take the child out under the lock, then release it before killing.
     let active = state.lock_preview().await.take();
