@@ -24,13 +24,13 @@
 
 When the user needs to write code involving an unfamiliar library or syntax, always follow this sequence — never skip steps:
 
-1. **Find a real example first.** Pull from `~/.cargo/registry/src` (Rust), `node_modules`, official docs, official git source code, or Context7. 
+1. **Find a real example first.** Pull from `~/.cargo/registry/src` (Rust), `node_modules`, official docs, official git source code, or Context7.
 2. **Prefer code.** Source level examples over documentation prose — they show exactly what compiles.
-2. **Annotate the example.** Explain what each part does and *why* — types, lifetimes, trait bounds, async behaviour.
-3. **Map it to our codebase.** Show explicitly how the generic example translates to our types, state, and conventions.
-4. **Then** describe what the user should write. At this point they have a working mental model.
+3. **Annotate the example.** Explain what each part does and *why* — types, lifetimes, trait bounds, async behaviour.
+4. **Map it to our codebase.** Show explicitly how the generic example translates to our types, state, and conventions.
+5. **Then** describe what the user should write. At this point they have a working mental model.
 
-Never present a placeholder and ask the user to fill it in without completing steps 1–3 first. "Consider the trade-offs"
+Never present a placeholder and ask the user to fill it in without completing steps 1–4 first. "Consider the trade-offs"
 guidance is only useful after the user understands what they are trading.
 
 Be specific, always refer to the user's codebase, clearly show the referenced file, and project context when explaining concepts and decisions. Avoid generic explanations that do not apply to the specific project.
@@ -47,6 +47,33 @@ Be specific, always refer to the user's codebase, clearly show the referenced fi
 | Unit tests          | Vitest (JS/TS), cargo test (Rust)       |
 | Package managers    | cargo, pnpm                             |
 
+## Repo shape (not microservices)
+
+This is a monorepo with **one** backend binary and one frontend SPA.
+
+| Path | Role |
+|------|------|
+| `backend/` | Axum API, WS protocol, FSMs, Astro process control |
+| `frontend/` | SvelteKit admin UI |
+| `integration-tests/` | Playwright (host, not Docker) |
+| `.claude/specs/` | Historical design notes |
+
+Do **not** invent service names or `test-{service}` tasks that are not in `mise.toml`.
+
+## Commands (source of truth: `mise.toml`)
+
+| Intent | Command |
+|--------|---------|
+| Run backend | `mise run backend` |
+| Run frontend | `mise run frontend` |
+| Export wire types | `mise run export-types` |
+| Unit tests once | `mise run test-unit` |
+| Integration tests | `mise run test` |
+| Release binary | `mise run build` |
+| Format | `mise run format` |
+
+Layer READMEs document env vars and package-local `cargo` / `pnpm` commands. Keep them aligned with `mise.toml`.
+
 ## Coding Standards
 
 - **TDD:** RED → GREEN → REFACTOR. Never skip RED. Target 100% coverage.
@@ -59,9 +86,18 @@ Be specific, always refer to the user's codebase, clearly show the referenced fi
   `backon`, config → `envy`+`dotenvy`, validation → `validator`.
 - Always check the latest API of the suggested library or framework before recommending usage patterns
 
-## Documentation & Commands
+## Architecture invariants (do not regress without an explicit decision)
 
-- Each microservice has its own `README.md` with: purpose, env vars, `cargo run`, `cargo test`
-- Project-wide commands live in `mise.toml` — one task per logical operation
-- mise tasks follow the pattern: `test-{service}`, `run-{service}`, `check-{service}`
-- Keep `mise.toml` and service READMEs in sync whenever commands or env vars change
+1. Application protocol is **WebSocket-only** (`/ws`); HTTP is `/healthz` + static SPA.
+2. Wire types live in `backend/src/types.rs` and are exported with specta — never hand-edit `bindings.ts`.
+3. Domain transitions go through FSMs in `backend/src/fsm/`; reject illegal commands with typed errors.
+4. No Docker-based workflow in this repo currently.
+5. **Docs match code.** If behaviour changes, update README / ARCHITECTURE / AGENTS in the same change. Specs are history, not live config.
+
+## Documentation map
+
+- Product + run: `README.md`
+- System design (as built): `ARCHITECTURE.md`
+- Agent behaviour + standards: this file
+- Backend Rust rules: `backend/AGENTS.md` and `backend/ARCHITECTURE.md`
+- Frontend Svelte rules: `frontend/AGENTS.md` and `frontend/ARCHITECTURE.md`
