@@ -54,6 +54,7 @@
     "vitest-browser-svelte": "^2.1.1"
   },
   "dependencies": {
-    "@lucide/svelte": "^1.14.0"
+    "@lucide/svelte": "^1.14.0",
+    "@milkdown/crepe": "^7.21.2"
   }
 }

@@ -35,7 +35,7 @@ describe("/+page.svelte", () => {
 
     await expect.element(page.getByText("My Blog")).toBeInTheDocument();
     await expect
-      .element(page.getByRole("button", { name: /Start Preview/ }))
+      .element(page.getByRole("link", { name: /Edit posts/ }))
       .toBeInTheDocument();
   });
 });

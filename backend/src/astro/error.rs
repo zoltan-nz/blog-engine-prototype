@@ -19,9 +19,21 @@ pub enum AstroError {
     #[error("Command failed: {0}")]
     CommandFailed(String),
 
+    #[error("Post content is not valid: missing '---' frontmatter delimiters")]
+    InvalidPostFormat,
+
+    #[error("Post '{0}' does not exist")]
+    PostNotFound(String),
+
+    #[error("Post '{0}' already exists")]
+    PostAlreadyExists(String),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    Yaml(#[from] serde_yaml_ng::Error),
 }

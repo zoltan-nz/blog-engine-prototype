@@ -5,6 +5,7 @@
 - **One process:** Rust/Axum binary (`blog-engine-api`).
 - **Three HTTP surfaces:** `GET /healthz`, `GET /ws` (WebSocket), static SPA.
 - **No database.** Site list lives in `{SITES_DIR}/sites.json`; site files live under `{SITES_DIR}/{slug}/`.
+- **Blog posts are markdown files.** Each site's posts live at `{SITES_DIR}/{slug}/src/content/blog/{id}.md` (Astro content collection); the backend reads/writes these directly, no separate post database.
 - **No OpenAPI / REST resource API.** Application ops go over the typed WebSocket protocol.
 - **Git is not wired yet.** Scaffold runs with `--no-git`; `git_url` on the manifest is currently empty. Treat “Git source of truth” as a future goal, not current behaviour.
 
@@ -21,6 +22,7 @@ Axum :8080
   └── static SPA (ServeDir in dev; rust-embed with --features embed)
           │
           ├── sites.json + site folders under SITES_DIR
+          ├── src/content/blog/{id}.md per site (post CRUD, atomic writes)
           └── spawn: pnpm create astro / pnpm install / pnpm dev / build
                       │
                       └── Astro preview :PREVIEW_PORT (browser hits this directly)
@@ -29,7 +31,8 @@ Axum :8080
 ## Frontend state
 
 - Server state is **push-only** via WebSocket into `frontend/src/lib/state/socket.svelte.ts`.
-- Full `Snapshot` on every (re)connect; then `SiteChanged` / `SiteRemoved` / `PreviewChanged` / `BuildLog` / `Error`.
+- Full `Snapshot` on every (re)connect — includes a `posts` map (`site_slug` → sorted post list); then `SiteChanged` / `SiteRemoved` / `PreviewChanged` / `BuildLog` / `PostChanged` / `PostRemoved` / `Error`.
+- A post's markdown body is not in the snapshot (could be large per site) — the editor fetches it on demand via `GetPost`/`PostBody`, a request-reply pair matched by `correlation_id` (see `PendingRequests` in `socket.svelte.ts`).
 - No TanStack Query for server state.
 
 ## Domain FSMs
@@ -40,6 +43,8 @@ Pure `transition(state, event)` in `backend/src/fsm/`:
 - `PreviewState`: Stopped → Starting → Running → Stopping → Stopped; Failed + retry paths
 
 Illegal transitions become typed `Event::Error` (`ErrorCode::InvalidTransition`, etc.).
+
+Posts deliberately have **no FSM**: create/update/delete is a single synchronous filesystem write with no observable intermediate state (unlike scaffold/build/preview, which have real in-between states worth modeling).
 
 ## Wire types
 
@@ -67,7 +72,7 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 |------|------|
 | `backend/src/ws/` | Upgrade, dispatch, fan-out |
 | `backend/src/fsm/` | Pure site/preview transitions |
-| `backend/src/astro/` | Manifest, scaffold, preview child, build |
+| `backend/src/astro/` | Manifest, scaffold, preview child, build, post CRUD |
 | `backend/src/types.rs` | Specta wire types |
 | `frontend/src/lib/state/socket.svelte.ts` | Client store + reconnect |
 

@@ -43,18 +43,24 @@ test.describe.serial('Sites - full lifecycle over WS', () => {
 
     // Scaffold finishes → badge disappears, actions enabled.
     await expect(card.getByText('Scaffolding…')).toBeHidden({ timeout: 280_000 });
-    await expect(card.getByRole('button', { name: /Start Preview/ })).toBeEnabled();
+    await expect(card.getByRole('link', { name: /Edit posts/ })).toBeEnabled();
   });
 
-  test('starting a preview shows the Live badge with a working URL', async ({ page }) => {
+  test('opening the editing area auto-starts the preview; Live badge appears back on the dashboard', async ({
+    page,
+  }) => {
     test.setTimeout(120_000);
 
     await page.goto(FRONTEND_URL);
     const card = page.locator('li', { hasText: BLOG_NAME });
-    await card.getByRole('button', { name: /Start Preview/ }).click();
+    await card.getByRole('link', { name: /Edit posts/ }).click();
 
-    const live = card.getByRole('link', { name: 'Live' });
-    await expect(live).toBeVisible({ timeout: 90_000 });
+    await expect(page.locator('iframe[src]')).toBeVisible({ timeout: 90_000 });
+
+    await page.goto(FRONTEND_URL);
+    const liveCard = page.locator('li', { hasText: BLOG_NAME });
+    const live = liveCard.getByRole('link', { name: 'Live' });
+    await expect(live).toBeVisible({ timeout: 30_000 });
 
     const previewUrl = await live.getAttribute('href');
     expect(previewUrl).toBeTruthy();

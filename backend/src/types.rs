@@ -42,18 +42,52 @@ pub enum ErrorCode {
     BuildFailed,
     PreviewTimeout,
     Internal,
+    PostNotFound,
+    PostAlreadyExists,
+    InvalidInput,
 }
 
 /// Client → server messages.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(tag = "type", content = "payload")]
 pub enum Command {
-    CreateSite { name: String, slug: String },
-    BuildSite { slug: String },
-    StartPreview { slug: String },
+    CreateSite {
+        name: String,
+        slug: String,
+    },
+    BuildSite {
+        slug: String,
+    },
+    StartPreview {
+        slug: String,
+    },
     StopPreview,
-    DeleteSite { slug: String },
+    DeleteSite {
+        slug: String,
+    },
     Ping,
+    CreatePost {
+        site_slug: String,
+        id: String,
+        title: String,
+        description: String,
+        body: String,
+    },
+    UpdatePost {
+        site_slug: String,
+        id: String,
+        title: String,
+        description: String,
+        body: String,
+    },
+    DeletePost {
+        site_slug: String,
+        id: String,
+    },
+    GetPost {
+        site_slug: String,
+        id: String,
+    },
 }
 
 /// A site as the frontend sees it: identity plus current FSM state.
@@ -73,6 +107,17 @@ pub struct PreviewView {
     pub url: Option<String>,
 }
 
+/// A blog post's listing metadata — everything needed to render a post list
+/// row without reading the (larger) markdown body from disk.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct PostMeta {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub pub_date: String,
+    pub updated_date: Option<String>,
+}
+
 /// Server → client messages. `Snapshot` is sent on every connect — reconnect
 /// strategy is a fresh snapshot, never event replay.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -81,6 +126,7 @@ pub enum Event {
     Snapshot {
         sites: Vec<SiteView>,
         preview: PreviewView,
+        posts: std::collections::HashMap<String, Vec<PostMeta>>,
     },
     SiteChanged(SiteView),
     SiteRemoved {
@@ -98,6 +144,19 @@ pub enum Event {
         correlation_id: Option<String>,
     },
     Pong,
+    PostChanged {
+        site_slug: String,
+        post: PostMeta,
+    },
+    PostRemoved {
+        site_slug: String,
+        id: String,
+    },
+    PostBody {
+        site_slug: String,
+        id: String,
+        body: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -164,6 +223,58 @@ mod tests {
         }"#;
         let envelope: WsEnvelope = serde_json::from_str(raw).unwrap();
         assert_eq!(envelope.message, WsMessage::Command(Command::Ping));
+    }
+
+    #[test]
+    fn create_post_command_roundtrips_from_client_json() {
+        let raw = r#"{
+            "unix_timestamp_us": 0,
+            "correlation_id": "c-3",
+            "type": "Command",
+            "payload": { "type": "CreatePost", "payload": {
+                "site_slug": "my-blog", "id": "hello-world",
+                "title": "Hello World", "description": "desc", "body": "body\n"
+            } }
+        }"#;
+        let envelope: WsEnvelope = serde_json::from_str(raw).unwrap();
+        assert_eq!(
+            envelope.message,
+            WsMessage::Command(Command::CreatePost {
+                site_slug: "my-blog".into(),
+                id: "hello-world".into(),
+                title: "Hello World".into(),
+                description: "desc".into(),
+                body: "body\n".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn snapshot_serializes_posts_map() {
+        use std::collections::HashMap;
+
+        let mut posts = HashMap::new();
+        posts.insert(
+            "my-blog".to_string(),
+            vec![PostMeta {
+                id: "hello-world".into(),
+                title: "Hello World".into(),
+                description: "desc".into(),
+                pub_date: "2026-01-01".into(),
+                updated_date: None,
+            }],
+        );
+        let event = Event::Snapshot {
+            sites: vec![],
+            preview: PreviewView {
+                state: PreviewState::Stopped,
+                slug: None,
+                url: None,
+            },
+            posts,
+        };
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["payload"]["posts"]["my-blog"][0]["id"], "hello-world");
     }
 
     #[test]

@@ -6,7 +6,7 @@
     Hammer,
     Loader,
     LoaderCircle,
-    Play,
+    Pencil,
     Square,
     Trash2,
     X,
@@ -112,8 +112,6 @@
           site.state.type === "Creating" || site.state.type === "Deleting"}
         {@const previewed = isPreviewedSite(site)}
         {@const isLive = previewed && socket.preview.state.type === "Running"}
-        {@const isStarting =
-          previewed && socket.preview.state.type === "Starting"}
         <li
           class="card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-sm"
         >
@@ -169,22 +167,14 @@
                 >
                   <Square size={16} />Stop Preview
                 </button>
-              {:else}
-                <button
-                  class="btn preset-outlined-surface-300-700 btn-sm"
-                  disabled={busy ||
-                    previewBusy ||
-                    site.state.type === "Building"}
-                  onclick={() => socket.startPreview(site.slug)}
-                >
-                  {#if isStarting}
-                    <LoaderCircle size={16} class="animate-spin" />
-                    Starting preview…
-                  {:else}
-                    <Play size={16} />Start Preview
-                  {/if}
-                </button>
               {/if}
+              <a
+                href={`/sites/${site.slug}`}
+                class="btn preset-outlined-surface-300-700 btn-sm"
+                aria-disabled={busy}
+              >
+                <Pencil size={16} />Edit posts
+              </a>
               <button
                 class="btn preset-outlined-surface-300-700 btn-sm"
                 disabled={busy ||

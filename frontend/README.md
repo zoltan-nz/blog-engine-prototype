@@ -3,6 +3,9 @@
 Generated with Svelte Kit generator `sv`. Static SPA (adapter-static), served
 by the Rust backend.
 
+Routes: `/` (site dashboard) and `/sites/[slug]` (post list + Milkdown editor,
+split-view with the live Astro preview — the first dynamic route in this app).
+
 All server state arrives over the typed WebSocket protocol
 (`src/lib/state/socket.svelte.ts`); the types in `src/lib/types/bindings.ts`
 are generated from the Rust wire types — never edit them by hand:

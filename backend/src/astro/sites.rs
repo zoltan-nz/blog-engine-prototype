@@ -51,11 +51,27 @@ async fn run_command(program: &str, args: &[&str], dir: &Path) -> Result<(), Ast
     Ok(())
 }
 
-/// Scaffolds a minimal Astro project in `site_dir` and installs dependencies.
+/// Removes every file under the post content directory, keeping the
+/// directory itself. The `blog` template ships sample posts (`.md` and
+/// `.mdx`) that would otherwise appear as unmanaged content on a brand-new
+/// site. `Ok(())` if the directory doesn't exist — nothing to clear.
+fn clear_sample_posts(site_dir: &Path) -> std::io::Result<()> {
+    let content_dir = site_dir.join(crate::astro::posts::CONTENT_DIR);
+    if !content_dir.is_dir() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(&content_dir)? {
+        fs::remove_file(entry?.path())?;
+    }
+    Ok(())
+}
+
+/// Scaffolds an Astro blog project in `site_dir` and installs dependencies.
 ///
 /// Runs sequentially:
-///   1. `pnpm create astro@latest . --template minimal --no-git --yes --skip-houston --no-install`
+///   1. `pnpm create astro@latest . --template blog --no-git --yes --skip-houston --no-install`
 ///   2. `pnpm install`
+///   3. clear the template's sample posts (see `clear_sample_posts`)
 ///
 /// Only `pnpm` (plus Node.js) must be on `PATH`; pnpm fetches the scaffolder
 /// itself, so no global `create-astro` install is required.
@@ -67,7 +83,7 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
             "astro@latest",
             ".",
             "--template",
-            "minimal",
+            "blog",
             "--no-git",
             "--yes",
             "--skip-houston",
@@ -85,6 +101,7 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
     )?;
 
     run_command("pnpm", &["install"], site_dir).await?;
+    clear_sample_posts(site_dir)?;
 
     tracing::info!(dir = %site_dir.display(), "Astro project scaffolded");
     Ok(())
@@ -134,6 +151,30 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
+
+    #[test]
+    fn clear_sample_posts_empties_content_dir() {
+        let site = TempDir::new().unwrap();
+        let content_dir = site.path().join(crate::astro::posts::CONTENT_DIR);
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::write(content_dir.join("first-post.md"), "sample").unwrap();
+        fs::write(content_dir.join("using-mdx.mdx"), "sample").unwrap();
+
+        clear_sample_posts(site.path()).unwrap();
+
+        let remaining: Vec<_> = fs::read_dir(&content_dir).unwrap().collect();
+        assert!(remaining.is_empty());
+        assert!(content_dir.is_dir());
+    }
+
+    #[test]
+    fn clear_sample_posts_is_ok_when_content_dir_missing() {
+        let site = TempDir::new().unwrap();
+
+        let result = clear_sample_posts(site.path());
+
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn list_sites_creates_manifest_file_when_missing() {

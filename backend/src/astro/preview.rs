@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::astro::error::AstroError;
 use crate::state::{ActivePreview, AppState};
+use process_wrap::tokio::{CommandWrap, ProcessGroup};
 
 /// Spawns `pnpm dev --port <port>` in the site's directory and waits until the
 /// port accepts connections (max 30s).
@@ -35,13 +36,20 @@ pub async fn start_preview(
         if !site_dir.exists() {
             return Err(AstroError::SiteNotFound(slug.to_string()));
         }
-        let child = tokio::process::Command::new("pnpm")
-            .args(["dev", "--port", &port.to_string(), "--host", "0.0.0.0"])
-            .env_remove("PNPM_SCRIPT_SRC_DIR")
-            .current_dir(&site_dir)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()?;
+        // `pnpm dev` spawns the real astro/vite dev server as a separate OS
+        // process (not exec'd in place), so tracking just this PID and
+        // killing it would orphan that grandchild. ProcessGroup::leader()
+        // puts pnpm and everything it spawns in one group; kill() below then
+        // signals the whole group.
+        let mut command = CommandWrap::with_new("pnpm", |cmd| {
+            cmd.args(["dev", "--port", &port.to_string(), "--host", "0.0.0.0"])
+                .env_remove("PNPM_SCRIPT_SRC_DIR")
+                .current_dir(&site_dir)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+        });
+        command.wrap(ProcessGroup::leader());
+        let child = command.spawn()?;
         *guard = Some(ActivePreview {
             slug: slug.to_string(),
             url: url.clone(),
@@ -75,7 +83,7 @@ pub async fn start_preview(
             }
         };
         if let Some(mut p) = stale {
-            p.child.kill().await.ok();
+            Box::into_pin(p.child.kill()).await.ok();
         }
         return Err(AstroError::DevServerTimeout(slug.to_string()));
     }
@@ -93,7 +101,7 @@ pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AstroError> {
     let active = state.lock_preview().await.take();
     if let Some(mut preview) = active {
         tracing::info!(slug = %preview.slug, "stopping preview");
-        preview.child.kill().await?;
+        Box::into_pin(preview.child.kill()).await?;
     }
     Ok(())
 }
@@ -101,10 +109,73 @@ pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AstroError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration as StdDuration;
     use tempfile::TempDir;
 
+    /// Blocks until `pidfile` contains a parseable PID, or panics after ~2s.
+    async fn read_pid_file(pidfile: &std::path::Path) -> i32 {
+        for _ in 0..40 {
+            if let Ok(contents) = std::fs::read_to_string(pidfile)
+                && let Ok(pid) = contents.trim().parse()
+            {
+                return pid;
+            }
+            tokio::time::sleep(StdDuration::from_millis(50)).await;
+        }
+        panic!("pidfile never appeared: {}", pidfile.display());
+    }
+
+    fn process_is_alive(pid: i32) -> bool {
+        std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .unwrap()
+            .success()
+    }
+
+    #[tokio::test]
+    async fn stop_preview_kills_the_whole_process_group_not_just_the_leader() {
+        let tmp = TempDir::new().unwrap();
+        let state = make_state(tmp.path());
+        let pidfile = tmp.path().join("grandchild.pid");
+
+        // `sh` is the tracked leader; `sleep` is a grandchild it backgrounds —
+        // mirrors pnpm (leader) spawning the real astro/vite dev server
+        // (grandchild) as a separate OS process.
+        let mut command = process_wrap::tokio::CommandWrap::with_new("sh", |cmd| {
+            cmd.arg("-c")
+                .arg(format!("sleep 60 & echo $! > {}; wait", pidfile.display()));
+        });
+        command.wrap(process_wrap::tokio::ProcessGroup::leader());
+        let child = command.spawn().unwrap();
+
+        *state.lock_preview().await = Some(ActivePreview {
+            slug: "test-site".to_string(),
+            url: "http://localhost:1".to_string(),
+            child,
+        });
+
+        let grandchild_pid = read_pid_file(&pidfile).await;
+        assert!(
+            process_is_alive(grandchild_pid),
+            "precondition: grandchild running"
+        );
+
+        stop_preview(&state).await.unwrap();
+        tokio::time::sleep(StdDuration::from_millis(200)).await;
+
+        assert!(
+            !process_is_alive(grandchild_pid),
+            "grandchild process should be dead after stop_preview, not orphaned"
+        );
+    }
+
     fn make_state(sites_dir: &std::path::Path) -> Arc<AppState> {
-        Arc::new(AppState::new(sites_dir, 4321, Vec::new()))
+        Arc::new(AppState::new(
+            sites_dir,
+            4321,
+            Vec::<(String, String, Vec<crate::types::PostMeta>)>::new(),
+        ))
     }
 
     #[tokio::test]
@@ -126,10 +197,11 @@ mod tests {
         let state = make_state(tmp.path());
 
         // Simulate a running preview by putting something in the mutex.
-        let fake_child = tokio::process::Command::new("sleep")
-            .arg("100")
-            .spawn()
-            .unwrap();
+        let fake_child = CommandWrap::with_new("sleep", |cmd| {
+            cmd.arg("100");
+        })
+        .spawn()
+        .unwrap();
         *state.lock_preview().await = Some(ActivePreview {
             slug: "other-site".to_string(),
             url: "http://localhost:4321".to_string(),
@@ -143,7 +215,7 @@ mod tests {
         // MutexGuard temporary drops before the await.
         let running = state.lock_preview().await.take();
         if let Some(mut p) = running {
-            p.child.kill().await.ok();
+            Box::into_pin(p.child.kill()).await.ok();
         }
     }
 

@@ -9,11 +9,12 @@ One Rust binary serves the SPA and a typed WebSocket control plane. No database.
 - Start / stop a single Astro preview (`PREVIEW_PORT`, default `4321`)
 - Build a site and stream build logs over the WebSocket
 - Domain lifecycle via pure FSMs (`SiteState`, `PreviewState`)
+- Blog post CRUD (`/sites/{slug}` editing area) with a Milkdown WYSIWYG editor and autosave; preview auto-starts/switches per site
 
 ## Not yet
 
 - Git as source of truth / commits per edit
-- Content editing CMS UI
+- Section-based pages, hero sections, static pages, image/asset management (blog posts only for now)
 - Deploy to GitHub Pages / Cloudflare Pages
 - Multi-preview or reverse-proxy of the preview through the backend
 

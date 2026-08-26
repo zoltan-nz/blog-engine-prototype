@@ -1,4 +1,4 @@
-use crate::types::{PreviewState, PreviewView, SiteState, WsEnvelope};
+use crate::types::{PostMeta, PreviewState, PreviewView, SiteState, WsEnvelope};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::sync::{Mutex, MutexGuard, RwLock, broadcast};
@@ -8,11 +8,13 @@ use tokio::sync::{Mutex, MutexGuard, RwLock, broadcast};
 const EVENTS_CHANNEL_CAPACITY: usize = 256;
 
 /// A running `pnpm dev` preview process. Owns the child so it can be killed on
-/// stop.
+/// stop. The child is a process-group leader (see `astro::preview::start_preview`)
+/// so killing it also kills the astro/vite dev server it spawns as a separate
+/// OS process — killing only the leader would orphan that process.
 pub struct ActivePreview {
     pub slug: String,
     pub url: String,
-    pub child: tokio::process::Child,
+    pub child: Box<dyn process_wrap::tokio::ChildWrapper>,
 }
 
 /// A managed site: display name plus current FSM state. Existence in the map
@@ -21,6 +23,11 @@ pub struct ActivePreview {
 pub struct SiteEntry {
     pub name: String,
     pub state: SiteState,
+    /// Post listing cache, sorted `pub_date` descending. Populated at
+    /// hydration and kept current by the post CRUD dispatch arms — reading
+    /// posts from disk on every `Snapshot` would mean a filesystem scan per
+    /// reconnect.
+    pub posts: Vec<PostMeta>,
 }
 
 pub struct AppState {
@@ -42,16 +49,17 @@ impl AppState {
     pub fn new(
         sites_dir: impl Into<PathBuf>,
         preview_port: u16,
-        initial_sites: impl IntoIterator<Item = (String, String)>,
+        initial_sites: impl IntoIterator<Item = (String, String, Vec<PostMeta>)>,
     ) -> Self {
         let sites = initial_sites
             .into_iter()
-            .map(|(slug, name)| {
+            .map(|(slug, name, posts)| {
                 (
                     slug,
                     SiteEntry {
                         name,
                         state: SiteState::Ready,
+                        posts,
                     },
                 )
             })

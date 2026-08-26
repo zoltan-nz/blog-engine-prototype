@@ -3,5 +3,6 @@
 //! process — these run as direct calls inside the backend now, no IPC.
 pub mod build;
 pub mod error;
+pub mod posts;
 pub mod preview;
 pub mod sites;

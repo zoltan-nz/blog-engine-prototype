@@ -28,6 +28,7 @@ Feature flag:
 | `fsm/site` | Pure `SiteState` transitions |
 | `fsm/preview` | Pure `PreviewState` transitions |
 | `astro/sites` | Manifest (`sites.json`), scaffold (`pnpm create astro`), delete |
+| `astro/posts` | Post CRUD: frontmatter parse/render, list/read/create/update/delete, atomic writes |
 | `astro/preview` | Spawn / stop Astro `pnpm dev`, readiness poll |
 | `astro/build` | Production build + log streaming |
 | `astro/error` | Typed process / IO errors |
@@ -52,6 +53,7 @@ fallback           → SPA (disk or embedded)
 3. After wire-type changes: `mise run export-types`.
 4. Keep `main.rs` free of domain logic; put it in modules with unit tests.
 5. Sites on disk are the persistence model today — not Git.
+6. Any client-supplied id that gets joined into a filesystem path (post id, site slug) must pass `validate_id` (`^[a-z0-9-]{1,64}$`) at the dispatch boundary first — reject with `ErrorCode::InvalidInput` otherwise.
 
 ## Tests
 
