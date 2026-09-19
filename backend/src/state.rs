@@ -1,3 +1,4 @@
+use crate::astro::watch::SiteWatcher;
 use crate::types::{PostMeta, PreviewState, PreviewView, SiteState, WsEnvelope};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -7,10 +8,12 @@ use tokio::sync::{Mutex, MutexGuard, RwLock, broadcast};
 /// so this only needs to absorb bursts like build-log floods.
 const EVENTS_CHANNEL_CAPACITY: usize = 256;
 
-/// A running `pnpm dev` preview process. Owns the child so it can be killed on
-/// stop. The child is a process-group leader (see `astro::preview::start_preview`)
-/// so killing it also kills the astro/vite dev server it spawns as a separate
-/// OS process — killing only the leader would orphan that process.
+/// A running `pnpm dev` preview process.
+///
+/// Owns the child so it can be killed on stop. The child is a process-group
+/// leader (see `astro::preview::start_preview`) so killing it also kills the
+/// astro/vite dev server it spawns as a separate OS process — killing only the
+/// leader would orphan that process.
 pub struct ActivePreview {
     pub slug: String,
     pub url: String,
@@ -41,6 +44,9 @@ pub struct AppState {
     pub events_tx: broadcast::Sender<WsEnvelope>,
     /// At most one preview runs at a time; the mutex serialises start/stop.
     preview: Mutex<Option<ActivePreview>>,
+    /// Per-site filesystem watchers, keyed by slug. `std::sync::Mutex` because
+    /// `create_app` is sync and these are never held across .await points.
+    pub watchers: std::sync::Mutex<HashMap<String, SiteWatcher>>,
 }
 
 impl AppState {
@@ -78,6 +84,7 @@ impl AppState {
             }),
             events_tx,
             preview: Mutex::new(None),
+            watchers: std::sync::Mutex::new(HashMap::new()),
         }
     }
 

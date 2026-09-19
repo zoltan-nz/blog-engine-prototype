@@ -20,6 +20,11 @@ pub struct InvalidTransition {
     pub event: PreviewEvent,
 }
 
+/// Pure transition function.
+///
+/// # Errors
+///
+/// Returns `InvalidTransition` when `event` is not a legal edge out of `state`.
 pub fn transition(
     state: PreviewState,
     event: PreviewEvent,

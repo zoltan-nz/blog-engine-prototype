@@ -8,6 +8,16 @@ use tokio::sync::mpsc;
 /// Runs `pnpm build` in `site_dir`, streaming stdout/stderr lines through
 /// `log_tx` as they arrive (the dispatcher forwards them as `BuildLog`
 /// events). Returns once the process exits.
+///
+/// # Errors
+///
+/// An IO error when `pnpm` cannot be spawned or waited on; `CommandFailed`
+/// when the build exits non-zero.
+///
+/// # Panics
+///
+/// Only if the spawned child lacks the stdout/stderr pipes configured just
+/// above — impossible given `Stdio::piped()`.
 pub async fn build_site(
     site_dir: &Path,
     log_tx: mpsc::UnboundedSender<(LogStream, String)>,

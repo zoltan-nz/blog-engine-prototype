@@ -73,3 +73,53 @@ struct Config {
 ## WebSocket
 
 WS functions: `upgrade_ws`, `dispatch_command` — verb-first. Reconnect strategy is a fresh `Snapshot`, not event replay.
+
+## Rust pattern checklist
+
+Drawn from the [rust-unofficial/patterns](https://rust-unofficial.github.io/patterns/) catalog. Apply the relevant group before writing or reviewing code.
+
+### Adding a new type
+
+| Check | Rule |
+|-------|------|
+| Primitive wrapper | Newtype over raw primitive (`struct PostId(String)`, not bare `String`) |
+| Constructors | Use `new()` or a builder; keep fields private |
+| `Default` | Derive or implement `Default` when a zero-value makes sense — reduces test boilerplate |
+| Function signatures | Accept `&str` / `&Path`, not `String` / `PathBuf` — callers should not clone just to call you |
+
+### Adding a new feature
+
+| Check | Rule |
+|-------|------|
+| Resource cleanup | RAII: tie teardown to `Drop`, not to a manual `close()` call the caller might forget |
+| Map mutation | Use `HashMap::entry()` instead of a get-then-insert pair — avoids a double lookup |
+| Complex construction | Builder pattern when a struct has more than three optional fields |
+| Error propagation | `thiserror` + `?`; no `.unwrap()` outside tests; `.expect("invariant reason")` for true panics |
+| Shared mutable state | `Arc<RwLock<T>>` for read-heavy state; `Arc<Mutex<T>>` when writes dominate |
+
+### Refactoring existing code
+
+| Check | Rule |
+|-------|------|
+| Behaviour variation | Strategy via trait objects or generics — not a match arm per variant |
+| Gratuitous `.clone()` | A clone to satisfy the borrow checker is a design smell; restructure ownership instead |
+| Boolean parameters | Replace `fn f(flag: bool)` with `enum Direction { Forward, Backward }` |
+| Arrow anti-pattern | Early return / `?` / guard clauses over nested `if`/`match` |
+
+## Two-step self-review
+
+Run this before finalising any new module or non-trivial change.
+
+**Step 1 — write the code.** Implement the feature, following the standards above.
+
+**Step 2 — idiom pass.** Read what you just wrote and answer each question:
+
+1. Does any function accept a `String` or `PathBuf` where `&str` or `&Path` would do?
+2. Is there a `.clone()` that exists only to satisfy the borrow checker?
+3. Does any `HashMap` mutation use get-then-insert instead of `entry()`?
+4. Is any resource cleanup done via an explicit method call rather than `Drop`?
+5. Does any struct have a boolean field that should be an enum?
+6. Are there nested `if` / `match` arms that an early return would flatten?
+7. Does any new public type lack a `Default` impl it would naturally support?
+
+Fix every "yes" before the code is considered done.

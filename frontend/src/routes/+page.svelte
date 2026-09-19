@@ -158,7 +158,7 @@
                 </p>
               </div>
             </div>
-            <div class="mt-4 flex gap-2">
+            <div class="mt-4 flex flex-wrap gap-2">
               {#if isLive}
                 <button
                   class="btn preset-outlined-surface-300-700 btn-sm"
@@ -184,20 +184,18 @@
               >
                 <Hammer size={16} />Build
               </button>
-              <div class="ml-auto">
-                <button
-                  onclick={() => handleDelete(site)}
-                  disabled={busy || site.state.type === "Building"}
-                  class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
-                >
-                  {#if site.state.type === "Deleting"}
-                    <Loader size={16} class="animate-spin" />
-                  {:else}
-                    <Trash2 size={16} />
-                  {/if}
-                  Destroy
-                </button>
-              </div>
+              <button
+                onclick={() => handleDelete(site)}
+                disabled={busy || site.state.type === "Building"}
+                class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
+              >
+                {#if site.state.type === "Deleting"}
+                  <Loader size={16} class="animate-spin" />
+                {:else}
+                  <Trash2 size={16} />
+                {/if}
+                Destroy
+              </button>
             </div>
           </div>
         </li>

@@ -78,4 +78,4 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 
 ## Specs
 
-Design history lives under `.claude/specs/`. Prefer this file and the code over draft narrative inside old specs.
+Active: `.claude/specs/0008-post-realtime-sync.md` — post realtime sync (fix scaffold, fix cache, watcher).

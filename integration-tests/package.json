@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "pretest": "node reset-sites.mjs",
     "test": "playwright test --reporter=list --timeout=30000"
   },
   "keywords": [],

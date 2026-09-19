@@ -10,7 +10,7 @@ const FRONTMATTER_DELIMITER_CLOSE: &str = "\n---\n";
 /// Astro content-collection directory for blog posts, relative to a site's root.
 pub const CONTENT_DIR: &str = "src/content/blog";
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostFrontMatter {
     pub title: String,
     pub description: String,
@@ -28,6 +28,11 @@ pub struct PostFrontMatter {
 ///
 /// The body is returned byte-for-byte as it appears after the closing
 /// delimiter — no trimming, so `render_post` can reproduce it exactly.
+///
+/// # Errors
+///
+/// `InvalidPostFormat` when the `---` frontmatter delimiters are missing; a
+/// deserialization error when the frontmatter YAML is malformed.
 pub fn parse_post(content: &str) -> Result<(PostFrontMatter, String), AstroError> {
     let (front_matter_str, body) = content
         .strip_prefix(FRONTMATTER_DELIMITER_OPEN)
@@ -39,10 +44,18 @@ pub fn parse_post(content: &str) -> Result<(PostFrontMatter, String), AstroError
     Ok((front_matter, body.to_string()))
 }
 
-/// Renders frontmatter and body back into post file content. Unknown
-/// frontmatter keys captured in `extra` are re-emitted by serde's flatten,
-/// which is what preserves fields this backend doesn't model (e.g. future
-/// page-editor metadata).
+/// Renders frontmatter and body back into post file content.
+///
+/// Unknown frontmatter keys captured in `extra` are re-emitted by serde's
+/// flatten, which is what preserves fields this backend doesn't model (e.g.
+/// future page-editor metadata).
+///
+/// # Panics
+///
+/// Only if `PostFrontMatter` fails to serialize, which cannot happen for this
+/// plain data struct — a panic here would signal a logic bug, not a runtime
+/// condition.
+#[must_use]
 pub fn render_post(front_matter: &PostFrontMatter, body: &str) -> String {
     // serde_yaml_ng::to_string never fails for a plain data struct like this
     // (no non-string map keys, no cyclic refs) — an error here would mean a
@@ -63,10 +76,16 @@ fn to_meta(id: &str, front_matter: &PostFrontMatter) -> PostMeta {
     }
 }
 
-/// Lists post metadata for a site, sorted by `pub_date` descending. Returns
-/// an empty list (not an error) when the content directory is missing —
-/// sites scaffolded before this feature, or from the `minimal` template,
+/// Lists post metadata for a site, sorted by `pub_date` descending.
+///
+/// Returns an empty list (not an error) when the content directory is missing
+/// — sites scaffolded before this feature, or from the `minimal` template,
 /// simply have no posts yet.
+///
+/// # Errors
+///
+/// An IO error when the content directory or a post file cannot be read, or a
+/// parse error when a post's frontmatter is malformed.
 pub fn list_posts(site_dir: &Path) -> Result<Vec<PostMeta>, AstroError> {
     let content_dir = site_dir.join(CONTENT_DIR);
     if !content_dir.is_dir() {
@@ -92,6 +111,11 @@ pub fn list_posts(site_dir: &Path) -> Result<Vec<PostMeta>, AstroError> {
 }
 
 /// Reads a single post's metadata and body from disk.
+///
+/// # Errors
+///
+/// `PostNotFound` when no file exists for `id`; a parse error when its
+/// frontmatter is malformed.
 pub fn read_post(site_dir: &Path, id: &str) -> Result<(PostMeta, String), AstroError> {
     let path = site_dir.join(CONTENT_DIR).join(format!("{id}.md"));
     let content =
@@ -101,10 +125,8 @@ pub fn read_post(site_dir: &Path, id: &str) -> Result<(PostMeta, String), AstroE
 }
 
 /// Writes `content` to `path` via write-to-temp-then-rename in the same
-/// directory. Astro's dev-server file watcher polls this directory on every
-/// autosave; a plain `fs::write` would let it observe a half-written file
-/// mid-write, since `fs::write` is not atomic. `fs::rename` within one
-/// filesystem is.
+/// directory. This keeps updates atomic so Astro never reads a partially
+/// written post.
 fn write_atomic(path: &Path, content: &str) -> std::io::Result<()> {
     let tmp_path = path.with_extension("md.tmp");
     fs::write(&tmp_path, content)?;
@@ -116,8 +138,13 @@ fn post_path(site_dir: &Path, id: &str) -> std::path::PathBuf {
     site_dir.join(CONTENT_DIR).join(format!("{id}.md"))
 }
 
-/// Creates a new post file. Errors `PostAlreadyExists` if `id` is taken;
-/// creates the content directory if this is the site's first post.
+/// Creates a new post file, creating the content directory if this is the
+/// site's first post.
+///
+/// # Errors
+///
+/// `PostAlreadyExists` when `id` is taken; an IO error when the directory or
+/// file write fails.
 pub fn create_post(
     site_dir: &Path,
     id: &str,
@@ -141,7 +168,10 @@ pub fn create_post(
         hero_image: None,
         extra: serde_yaml_ng::Mapping::new(),
     };
-    write_atomic(&path, &render_post(&front_matter, body))?;
+    // Astro's dev server needs a real create event to add a new collection
+    // entry. A rename from a temporary file can be reported as a change to
+    // the temporary path instead, so new posts use a direct write.
+    fs::write(&path, render_post(&front_matter, body))?;
 
     Ok(to_meta(id, &front_matter))
 }
@@ -149,6 +179,11 @@ pub fn create_post(
 /// Rewrites an existing post's title, description, and body, stamping
 /// `updated_date`. Reads the existing file first so `hero_image` and any
 /// unmodeled frontmatter keys survive untouched.
+///
+/// # Errors
+///
+/// `PostNotFound` when the post does not exist; a parse or IO error when the
+/// existing file is malformed or the write fails.
 pub fn update_post(
     site_dir: &Path,
     id: &str,
@@ -171,7 +206,11 @@ pub fn update_post(
     Ok(to_meta(id, &front_matter))
 }
 
-/// Deletes a post file. Errors `PostNotFound` if it does not exist.
+/// Deletes a post file.
+///
+/// # Errors
+///
+/// `PostNotFound` when the file does not exist.
 pub fn delete_post(site_dir: &Path, id: &str) -> Result<(), AstroError> {
     let path = post_path(site_dir, id);
     fs::remove_file(&path).map_err(|_| AstroError::PostNotFound(id.to_string()))

@@ -41,22 +41,20 @@ test.describe.serial('Post CRUD with live preview sync', () => {
     await expect(page.locator('iframe[src]')).toBeVisible({ timeout: 90_000 });
   });
 
-  test('creates a post from the New post prompt; it appears in the list', async ({ page }) => {
+  test('creates a post from the New post dialog; it appears in the list', async ({ page }) => {
     await page.goto(`${FRONTEND_URL}/sites/${SLUG}`);
-    page.once('dialog', (dialog) => dialog.accept(POST_TITLE));
 
     await page.getByRole('button', { name: 'New post' }).click();
+
+    // Skeleton dialog — fill the title input and submit.
+    await page.getByLabel('Title').fill(POST_TITLE);
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
 
     await expect(page.getByText(POST_TITLE)).toBeVisible({ timeout: 10_000 });
   });
 
-  // Verifies the write itself (editor → autosave → WS → dispatch → atomic
-  // file write) rather than Astro dev's content-collection HMR picking up
-  // the change: `astro dev` does not reliably hot-reload post files written
-  // by this backend (confirmed separately — `astro build` renders the same
-  // file correctly, so the content itself is valid; the dev server's live
-  // reload of externally-written files is the gap, tracked as a follow-up,
-  // not a defect in this app's write pipeline).
+  // Verifies the write itself (editor → autosave → WS → dispatch → file write)
+  // before checking Astro's content-collection HMR behavior.
   test('typing in the editor autosaves; the post file on disk reflects it', async ({ page }) => {
     await page.goto(`${FRONTEND_URL}/sites/${SLUG}`);
     await expect(page.locator('iframe[src]')).toBeVisible({ timeout: 90_000 });
@@ -81,6 +79,5 @@ test.describe.serial('Post CRUD with live preview sync', () => {
     await row.getByRole('button', { name: /delete/i }).click();
 
     await expect(page.getByText(POST_TITLE)).toBeHidden({ timeout: 10_000 });
-    await expect(page.getByText(/no posts yet/i)).toBeVisible();
   });
 });

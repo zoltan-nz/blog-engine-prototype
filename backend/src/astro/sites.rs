@@ -17,6 +17,13 @@ struct SitesManifest {
     sites: Vec<SiteData>,
 }
 
+/// Lists managed sites from the manifest, writing an empty manifest on first
+/// use.
+///
+/// # Errors
+///
+/// An IO error when the manifest cannot be read or created, or a
+/// deserialization error when it is malformed.
 pub fn list_sites(sites_dir: &Path) -> Result<Vec<SiteData>, AstroError> {
     let manifest_file = sites_dir.join(MANIFEST_FILE_NAME);
     if !manifest_file.exists() {
@@ -51,10 +58,10 @@ async fn run_command(program: &str, args: &[&str], dir: &Path) -> Result<(), Ast
     Ok(())
 }
 
-/// Removes every file under the post content directory, keeping the
-/// directory itself. The `blog` template ships sample posts (`.md` and
-/// `.mdx`) that would otherwise appear as unmanaged content on a brand-new
-/// site. `Ok(())` if the directory doesn't exist — nothing to clear.
+/// Removes every file under the post content directory, keeping the directory
+/// itself. Used in tests to verify the utility; not called during scaffold.
+/// `Ok(())` if the directory doesn't exist — nothing to clear.
+#[cfg(test)]
 fn clear_sample_posts(site_dir: &Path) -> std::io::Result<()> {
     let content_dir = site_dir.join(crate::astro::posts::CONTENT_DIR);
     if !content_dir.is_dir() {
@@ -71,10 +78,14 @@ fn clear_sample_posts(site_dir: &Path) -> std::io::Result<()> {
 /// Runs sequentially:
 ///   1. `pnpm create astro@latest . --template blog --no-git --yes --skip-houston --no-install`
 ///   2. `pnpm install`
-///   3. clear the template's sample posts (see `clear_sample_posts`)
 ///
 /// Only `pnpm` (plus Node.js) must be on `PATH`; pnpm fetches the scaffolder
 /// itself, so no global `create-astro` install is required.
+///
+/// # Errors
+///
+/// `CommandFailed` when a `pnpm` step exits non-zero or `pnpm` is not on
+/// `PATH`; an IO error when the workspace file cannot be written.
 pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
     run_command(
         "pnpm",
@@ -101,12 +112,17 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
     )?;
 
     run_command("pnpm", &["install"], site_dir).await?;
-    clear_sample_posts(site_dir)?;
 
     tracing::info!(dir = %site_dir.display(), "Astro project scaffolded");
     Ok(())
 }
 
+/// Registers a new site: creates its folder and appends it to the manifest.
+///
+/// # Errors
+///
+/// `SiteAlreadyExists` when `slug` is taken; an IO or serialization error when
+/// the folder or manifest write fails.
 pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData, AstroError> {
     let existing = list_sites(sites_dir)?;
     if existing.iter().any(|s| s.folder == slug) {
@@ -129,6 +145,12 @@ pub fn create_site(sites_dir: &Path, name: &str, slug: &str) -> Result<SiteData,
     Ok(site)
 }
 
+/// Removes a site's manifest entry and deletes its folder.
+///
+/// # Errors
+///
+/// `SiteNotFound` when no site matches `slug`; an IO or serialization error
+/// when removing the folder or rewriting the manifest fails.
 pub fn delete_site(sites_dir: &Path, slug: &str) -> Result<(), AstroError> {
     let sites = list_sites(sites_dir)?;
     if !sites.iter().any(|s| s.folder == slug) {

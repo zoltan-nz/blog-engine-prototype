@@ -1,4 +1,12 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+// `significant_drop_tightening` (nursery) false-positives on lock guards that
+// genuinely span their whole scope (e.g. a write guard mutated at the end of a
+// block); its own auto-suggestion is malformed. Suppress crate-wide, keep the
+// rest of nursery active.
+#![expect(
+    clippy::significant_drop_tightening,
+    reason = "guards intentionally held for their scope"
+)]
 
 pub mod app;
 pub mod astro;

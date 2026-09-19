@@ -30,7 +30,7 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'cargo run',
+    command: 'cargo run --bin blog-engine-api',
     cwd: '../backend',
     url: 'http://localhost:8080/healthz',
     reuseExistingServer: !process.env.CI,

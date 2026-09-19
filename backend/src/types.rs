@@ -1,7 +1,9 @@
-//! Wire types for the WebSocket protocol. Every type here derives
-//! `specta::Type` and is exported to `frontend/src/lib/types/bindings.ts` by
-//! `bin/export-types.rs` — the FSM states double as wire types so backend and
-//! frontend share one state vocabulary.
+//! Wire types for the WebSocket protocol.
+//!
+//! Every type here derives `specta::Type` and is exported to
+//! `frontend/src/lib/types/bindings.ts` by `bin/export-types.rs` — the FSM
+//! states double as wire types so backend and frontend share one state
+//! vocabulary.
 use serde::{Deserialize, Serialize};
 use specta::Type;
 

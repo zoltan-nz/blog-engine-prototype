@@ -74,7 +74,7 @@ pub async fn start_preview(
     if ready.is_err() {
         // Roll back the slot we claimed (only if it's still ours), then kill the
         // child after releasing the lock.
-        let stale = {
+        let orphaned = {
             let mut guard = state.lock_preview().await;
             if guard.as_ref().is_some_and(|p| p.slug == slug) {
                 guard.take()
@@ -82,7 +82,7 @@ pub async fn start_preview(
                 None
             }
         };
-        if let Some(mut p) = stale {
+        if let Some(mut p) = orphaned {
             Box::into_pin(p.child.kill()).await.ok();
         }
         return Err(AstroError::DevServerTimeout(slug.to_string()));

@@ -19,9 +19,18 @@ pub struct InvalidTransition {
     pub event: SiteEvent,
 }
 
-/// Pure transition function. Entry into `Creating` and exit from `Deleting`
-/// are map-level operations (insert/remove) handled by the dispatcher, not
-/// transitions of this machine.
+/// Pure transition function.
+///
+/// Entry into `Creating` and exit from `Deleting` are map-level operations
+/// (insert/remove) handled by the dispatcher, not transitions of this machine.
+///
+/// # Errors
+///
+/// Returns `InvalidTransition` when `event` is not a legal edge out of `state`.
+#[expect(
+    clippy::match_same_arms,
+    reason = "distinct FSM edges kept separate for readability even when they share a target state"
+)]
 pub fn transition(state: SiteState, event: SiteEvent) -> Result<SiteState, InvalidTransition> {
     match (&state, &event) {
         (SiteState::Creating, SiteEvent::ScaffoldSucceeded) => Ok(SiteState::Ready),

@@ -29,6 +29,14 @@
   });
 
   const previewIsForThisSite = $derived(socket.preview.slug === siteSlug);
+
+  const iframeSrc = $derived(
+    previewIsForThisSite && socket.preview.state.type === "Running" && socket.preview.url
+      ? selectedPost
+        ? `${socket.preview.url}/blog/${selectedPost.id}`
+        : socket.preview.url
+      : null
+  );
 </script>
 
 <div class="flex h-[calc(100vh-2rem)] flex-col">
@@ -67,7 +75,7 @@
     >
       {#if previewIsForThisSite && socket.preview.state.type === "Running" && socket.preview.url}
         <iframe
-          src={socket.preview.url}
+          src={iframeSrc ?? ""}
           title="Live preview"
           class="h-full w-full border-0"
         ></iframe>

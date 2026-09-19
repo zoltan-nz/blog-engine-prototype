@@ -160,7 +160,36 @@ async fn create_site(
     match result {
         Ok(()) => {
             match apply_site_event(&state, &slug, fsm::site::SiteEvent::ScaffoldSucceeded).await {
-                Ok(new_state) => broadcast_site(&state, &slug, &name, new_state),
+                Ok(new_state) => {
+                    broadcast_site(&state, &slug, &name, new_state);
+
+                    // Populate the post cache from the scaffold's template posts,
+                    // then notify connected clients so they see content immediately.
+                    let site_dir = state.sites_dir.join(&slug);
+                    let posts = astro::posts::list_posts(&site_dir).unwrap_or_default();
+                    if let Some(entry) = state.sites.write().await.get_mut(&slug) {
+                        entry.posts = posts;
+                    }
+                    broadcast(&state, snapshot_event(&state).await);
+
+                    // Start a watcher so future external changes reach the admin.
+                    match astro::watch::start_site_watcher(
+                        site_dir,
+                        slug.clone(),
+                        Arc::clone(&state),
+                    ) {
+                        Ok(watcher) => {
+                            state
+                                .watchers
+                                .lock()
+                                .expect("watchers mutex")
+                                .insert(slug.clone(), watcher);
+                        }
+                        Err(error) => {
+                            warn!(%error, %slug, "could not start watcher after scaffold");
+                        }
+                    }
+                }
                 Err(reply) => send_reply(&tx, correlation_id, reply).await,
             }
         }
@@ -397,6 +426,8 @@ async fn delete_site(
     match astro::sites::delete_site(&state.sites_dir, &slug) {
         Ok(()) => {
             state.sites.write().await.remove(&slug);
+            // Remove the watcher so the dropped SiteWatcher stops the OS watch.
+            state.watchers.lock().expect("watchers mutex").remove(&slug);
             broadcast(&state, Event::SiteRemoved { slug });
         }
         Err(error) => {

@@ -8,15 +8,44 @@ use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, warn};
 
+/// Builds the Axum router and shared `AppState`: hydrates sites from disk and
+/// starts a filesystem watcher per pre-existing site.
+///
+/// # Panics
+///
+/// If the `watchers` mutex is poisoned while starting watchers — only possible
+/// if another thread panicked holding it, which cannot happen during
+/// single-threaded construction.
 pub fn create_app(config: Config) -> (Router, Arc<AppState>) {
     info!("Initializing application.");
 
     let initial_sites = hydrate_sites(&config.sites_dir);
+
+    // Collect slugs before initial_sites is consumed by AppState::new.
+    let site_slugs: Vec<String> = initial_sites
+        .iter()
+        .map(|(slug, _, _)| slug.clone())
+        .collect();
+
     let state = Arc::new(AppState::new(
         config.sites_dir,
         config.preview_port,
         initial_sites,
     ));
+
+    // Start per-site watchers for pre-existing sites.
+    {
+        let mut watchers = state.watchers.lock().expect("watchers mutex");
+        for slug in site_slugs {
+            let site_dir = state.sites_dir.join(&slug);
+            match astro::watch::start_site_watcher(site_dir, slug.clone(), Arc::clone(&state)) {
+                Ok(watcher) => {
+                    watchers.insert(slug.clone(), watcher);
+                }
+                Err(error) => warn!(%error, %slug, "could not start watcher for site"),
+            }
+        }
+    }
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
