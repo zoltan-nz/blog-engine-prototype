@@ -101,7 +101,7 @@
           <div class="grid grid-cols-3 gap-1">
             {#each ["system", "light", "dark"] as const as m}
               <button
-                class="btn btn-sm text-xs capitalize transition-colors"
+                class="btn text-xs capitalize transition-colors btn-sm"
                 class:preset-filled-primary-500={mode === m}
                 class:preset-tonal-surface={mode !== m}
                 onclick={() => setMode(m)}

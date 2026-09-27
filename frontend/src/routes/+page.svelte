@@ -187,7 +187,7 @@
               <button
                 onclick={() => handleDelete(site)}
                 disabled={busy || site.state.type === "Building"}
-                class="btn items-center preset-outlined-error-300-700 btn-sm text-error-50"
+                class="btn items-center preset-outlined-error-300-700 text-error-50 btn-sm"
               >
                 {#if site.state.type === "Deleting"}
                   <Loader size={16} class="animate-spin" />

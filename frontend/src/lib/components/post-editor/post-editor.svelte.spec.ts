@@ -29,7 +29,7 @@ describe("PostEditor", () => {
   });
 
   it("loads the post body via requestPost and mounts the editor with it", async () => {
-    render(PostEditor, {
+    await render(PostEditor, {
       props: { siteSlug: "my-blog", post: post() },
     });
 
@@ -41,7 +41,7 @@ describe("PostEditor", () => {
   });
 
   it("prefills title and description inputs from the post prop", async () => {
-    render(PostEditor, {
+    await render(PostEditor, {
       props: { siteSlug: "my-blog", post: post() },
     });
 
@@ -54,7 +54,7 @@ describe("PostEditor", () => {
   });
 
   it("does not re-fetch the body when only metadata changes on the same post id", async () => {
-    const { rerender } = render(PostEditor, {
+    const { rerender } = await render(PostEditor, {
       props: { siteSlug: "my-blog", post: post() },
     });
     await expect.element(page.getByText("Body text here.")).toBeInTheDocument();

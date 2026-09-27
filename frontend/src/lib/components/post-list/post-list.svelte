@@ -72,7 +72,7 @@
         <button
           type="button"
           aria-label={`Delete ${post.title}`}
-          class="mr-2 btn-icon btn-icon-sm preset-tonal-error"
+          class="mr-2 btn-icon preset-tonal-error btn-icon-sm"
           onclick={(e) => handleDelete(post, e)}
         >
           <Trash2 size={14} />

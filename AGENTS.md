@@ -38,7 +38,7 @@ Be specific, always refer to the user's codebase, clearly show the referenced fi
 |---------------------|-----------------------------------------|
 | Env and task runner | `mise`                                  |
 | Frontend            | SvelteKit                               |
-| UI components       | Skeleton v4 + Tailwind v4               |
+| UI components       | Skeleton v5 + Tailwind v4               |
 | Backend             | Rust/Axum                               |
 | Integration tests   | Playwright (run on host, not in Docker) |
 | Unit tests          | Vitest (JS/TS), cargo test (Rust)       |

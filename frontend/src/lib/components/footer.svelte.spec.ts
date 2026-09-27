@@ -31,7 +31,7 @@ describe("Footer", () => {
       }),
     } as Response);
 
-    render(Footer);
+    await render(Footer);
 
     await expect.element(page.getByText("Connected")).toBeInTheDocument();
     await expect.element(page.getByText("Version: 1.0.0")).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe("Footer", () => {
   it("shows the configured backend URL", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("Network error"));
 
-    render(Footer);
+    await render(Footer);
 
     await expect
       .element(page.getByText("Backend: http://test-backend.test:8080"))

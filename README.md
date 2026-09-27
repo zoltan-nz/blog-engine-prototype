@@ -60,7 +60,7 @@ mise run export-types
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | SvelteKit (static SPA), Skeleton v4, Tailwind v4 |
+| Frontend | SvelteKit (static SPA), Skeleton v5, Tailwind v4 |
 | Backend | Rust, Axum, Tokio |
 | Protocol | WebSocket `Command` / `Event`; specta → `frontend/src/lib/types/bindings.ts` |
 | Domain | Hand-rolled FSMs in `backend/src/fsm/` |

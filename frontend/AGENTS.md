@@ -7,7 +7,7 @@ Frontend module map: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 - **Icons:** `@lucide/svelte` is installed — always import named icons (`Trash2`, `Loader`, etc.). Never write inline
   `<svg>` markup for icons.
-- **UI kit:** Skeleton v4 + Tailwind v4 (`@skeletonlabs/skeleton`, `@skeletonlabs/skeleton-svelte`). Not shadcn.
+- **UI kit:** Skeleton v5 + Tailwind v4 (`@skeletonlabs/skeleton`, `@skeletonlabs/skeleton-svelte`). Not shadcn.
 - **Svelte 5 `{@const}`:** must be a direct child of `{#each}`, `{#if}`, `{:else}`, etc. — not nested inside `<div>`
   or other HTML elements. Place all `{@const}` declarations at the top of the block they belong to.
 - **Server state comes from the WebSocket store:** use `getSocket()` from `$lib/state/socket.svelte` — commands

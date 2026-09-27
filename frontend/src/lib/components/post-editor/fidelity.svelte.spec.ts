@@ -4,8 +4,8 @@ import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/classic.css";
 
 // Confirmed risk (see spec section 5, "Known risk"): remark-stringify
-// normalizes formatting even in untouched regions on Crepe 7.21.2— `-` list
-// markers become `*`, and blank lines are inserted between list items.
+// normalizes formatting even in untouched regions on Crepe 7.22.1— `-` list
+// markers become `*`. (7.21.2 also inserted blank lines between list items.)
 // Accepted trade-off: posts get reformatted (not mangled — content and
 // structure are preserved) the first time they're opened and saved. This
 // test pins the exact normalized shape so a Crepe/remark upgrade that
@@ -30,9 +30,7 @@ const EXPECTED_AFTER_NORMALIZATION = `# Heading
 Some **bold** text and a [link](https://example.com).
 
 * one
-
 * two
-
 * three
 
 \`\`\`js

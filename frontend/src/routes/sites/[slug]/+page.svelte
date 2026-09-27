@@ -31,11 +31,13 @@
   const previewIsForThisSite = $derived(socket.preview.slug === siteSlug);
 
   const iframeSrc = $derived(
-    previewIsForThisSite && socket.preview.state.type === "Running" && socket.preview.url
+    previewIsForThisSite &&
+      socket.preview.state.type === "Running" &&
+      socket.preview.url
       ? selectedPost
         ? `${socket.preview.url}/blog/${selectedPost.id}`
         : socket.preview.url
-      : null
+      : null,
   );
 </script>
 

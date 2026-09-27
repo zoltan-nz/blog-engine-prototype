@@ -14,14 +14,14 @@ vi.mock("$lib/state/socket.svelte", async () => {
 
 describe("/+page.svelte", () => {
   it("should render h1", async () => {
-    render(Page);
+    await render(Page);
 
     const heading = page.getByRole("heading", { level: 1 });
     await expect.element(heading).toBeInTheDocument();
   });
 
   it('should render the "Create a new blog" button', async () => {
-    render(Page);
+    await render(Page);
 
     const button = page.getByRole("button", { name: "Create a new blog" });
     await expect.element(button).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("/+page.svelte", () => {
     fakeSocket.sites = [
       { slug: "my-blog", name: "My Blog", state: { type: "Ready" } },
     ];
-    render(Page);
+    await render(Page);
 
     await expect.element(page.getByText("My Blog")).toBeInTheDocument();
     await expect

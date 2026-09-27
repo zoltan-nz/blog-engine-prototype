@@ -33,16 +33,16 @@ Rules:
 
 ## Directory map
 
-| Path | Role |
-|------|------|
-| `src/routes/+page.svelte` | Main admin UI (site list, create dialog, actions) |
-| `src/routes/+layout.svelte` | Shell, theme/font setup |
-| `src/routes/+layout.ts` | `ssr = false` (SPA) |
-| `src/lib/state/socket.svelte.ts` | WebSocket client, reducers, connection lifecycle |
-| `src/lib/state/font.svelte.ts` | Client-only font preference |
-| `src/lib/types/bindings.ts` | **Generated** wire types — never hand-edit |
-| `src/lib/components/` | Footer, theme selector, font selector |
-| `src/lib/test/mocks/` | Env + socket mocks for Vitest |
+| Path                             | Role                                              |
+| -------------------------------- | ------------------------------------------------- |
+| `src/routes/+page.svelte`        | Main admin UI (site list, create dialog, actions) |
+| `src/routes/+layout.svelte`      | Shell, theme/font setup                           |
+| `src/routes/+layout.ts`          | `ssr = false` (SPA)                               |
+| `src/lib/state/socket.svelte.ts` | WebSocket client, reducers, connection lifecycle  |
+| `src/lib/state/font.svelte.ts`   | Client-only font preference                       |
+| `src/lib/types/bindings.ts`      | **Generated** wire types — never hand-edit        |
+| `src/lib/components/`            | Footer, theme selector, font selector             |
+| `src/lib/test/mocks/`            | Env + socket mocks for Vitest                     |
 
 ## Wire types
 
@@ -58,16 +58,16 @@ Import as `$lib/types/bindings.js` (SvelteKit ESM convention).
 ## UI stack
 
 - Svelte 5 runes (`$state`, `$derived`, …)
-- Skeleton v4 + Tailwind v4
+- Skeleton v5 + Tailwind v4
 - Icons: `@lucide/svelte`
 
 ## Tests
 
-| Kind | How |
-|------|-----|
-| Component / reducer unit | `pnpm exec vitest run` (browser Playwright provider for `*.svelte.spec.ts`) |
-| Type check | `pnpm run check` |
-| End-to-end against live backend | `mise run test` from repo root (`integration-tests/`) |
+| Kind                            | How                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| Component / reducer unit        | `pnpm exec vitest run` (browser Playwright provider for `*.svelte.spec.ts`) |
+| Type check                      | `pnpm run check`                                                            |
+| End-to-end against live backend | `mise run test` from repo root (`integration-tests/`)                       |
 
 ## Invariants when extending
 

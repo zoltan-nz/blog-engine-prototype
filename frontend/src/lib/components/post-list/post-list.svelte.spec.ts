@@ -39,21 +39,27 @@ describe("PostList", () => {
         post("older", "Older Post", "2026-01-01"),
       ],
     };
-    render(PostList, { props: { siteSlug: "my-blog", onSelect: vi.fn() } });
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
 
     const rows = page.getByRole("listitem");
-    await expect.element(rows.nth(0)).toHaveTextContent("Newer Post");
-    await expect.element(rows.nth(1)).toHaveTextContent("Older Post");
+    await expect.element(rows.nth(0)).toMatchTextContent("Newer Post");
+    await expect.element(rows.nth(1)).toMatchTextContent("Older Post");
   });
 
   it("shows an empty state when the site has no posts", async () => {
-    render(PostList, { props: { siteSlug: "my-blog", onSelect: vi.fn() } });
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
 
     await expect.element(page.getByText(/no posts yet/i)).toBeInTheDocument();
   });
 
   it("opens a dialog and creates a post from the entered title, slugified into an id", async () => {
-    render(PostList, { props: { siteSlug: "my-blog", onSelect: vi.fn() } });
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
 
     await page.getByRole("button", { name: "New post" }).click();
     await expect.element(page.getByRole("dialog")).toBeInTheDocument();
@@ -70,7 +76,9 @@ describe("PostList", () => {
   });
 
   it("does not create a post if the dialog is cancelled", async () => {
-    render(PostList, { props: { siteSlug: "my-blog", onSelect: vi.fn() } });
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
 
     await page.getByRole("button", { name: "New post" }).click();
     await page.getByLabelText("Title").fill("Should not save");
@@ -83,7 +91,9 @@ describe("PostList", () => {
     fakeSocket.posts = {
       "my-blog": [post("a-post", "A Post", "2026-01-01")],
     };
-    render(PostList, { props: { siteSlug: "my-blog", onSelect: vi.fn() } });
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
 
     await page.getByRole("button", { name: /delete/i }).click();
 
@@ -95,7 +105,7 @@ describe("PostList", () => {
     fakeSocket.posts = {
       "my-blog": [post("a-post", "A Post", "2026-01-01")],
     };
-    render(PostList, { props: { siteSlug: "my-blog", onSelect } });
+    await render(PostList, { props: { siteSlug: "my-blog", onSelect } });
 
     await page.getByText("A Post").click();
 
