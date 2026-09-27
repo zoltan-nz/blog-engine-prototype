@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, untrack } from "svelte";
   import { Crepe } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/classic.css";
@@ -14,9 +14,10 @@
   // Seeded once from the prop, then locally owned by the inputs below — not
   // a $derived, since the parent's `{#key post.id}` guarantees a fresh
   // instance (and fresh seed) per distinct post; re-syncing from `post` on
-  // every prop update would clobber in-progress typing.
-  let title = $state(post.title);
-  let description = $state(post.description);
+  // every prop update would clobber in-progress typing. untrack() marks the
+  // one-time read as intended.
+  let title = $state(untrack(() => post.title));
+  let description = $state(untrack(() => post.description));
   let editorRoot: HTMLDivElement | undefined = $state();
   let crepe: Crepe | null = null;
 
@@ -33,9 +34,9 @@
   // Fetch-and-mount runs exactly once per component instance: the parent
   // wraps usage in `{#key post.id}` so a genuinely different post gets a
   // fresh instance (fresh onMount), while a metadata-only prop change on
-  // the same post updates title/description reactively (see bind:value
-  // below) without ever refetching the body or remounting Crepe — the
-  // spec's echo invariant.
+  // the same post never refetches the body or remounts Crepe (the spec's
+  // echo invariant). Title/description keep their local values too; see
+  // the seeding comment above.
   let destroyed = false;
 
   onMount(() => {
