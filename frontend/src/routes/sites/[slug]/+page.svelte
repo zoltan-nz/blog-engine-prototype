@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { getSocket } from "$lib/state/socket.svelte";
   import { decidePreviewAction } from "$lib/state/preview-switch.js";
@@ -44,7 +45,7 @@
 <div class="flex h-[calc(100vh-2rem)] flex-col">
   <header class="mb-4 flex items-center gap-3">
     <a
-      href="/"
+      href={resolve("/")}
       class="btn-icon preset-outlined-surface-300-700 btn-sm"
       aria-label="Back to dashboard"
     >

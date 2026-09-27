@@ -25,7 +25,7 @@
         class="z-50 w-56 overflow-hidden card rounded-container border border-surface-200-800 preset-filled-surface-100-900 shadow-xl"
       >
         <ul class="max-h-72 overflow-y-auto p-1">
-          {#each fonts as font}
+          {#each fonts as font (font.family)}
             <li>
               <button
                 class="flex w-full items-center gap-3 rounded px-2 py-1.5 text-xs capitalize transition-colors hover:preset-tonal-surface"

@@ -79,6 +79,8 @@ export function removePost(
  * WebSocket connection so it's unit-testable without a live socket.
  */
 export class PendingRequests {
+  // Promise bookkeeping, never rendered: plain Map on purpose.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   #pending = new Map<
     string,
     { resolve: (body: string) => void; reject: (error: ProtocolError) => void }
@@ -115,6 +117,8 @@ export class PendingRequests {
  * the other match key is cleaned up alongside it.
  */
 export class PendingUpdates {
+  // Promise bookkeeping, never rendered: plain Map on purpose.
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   #byCorrelation = new Map<
     string,
     {
@@ -123,6 +127,7 @@ export class PendingUpdates {
       postKey: string;
     }
   >();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   #byPostKey = new Map<string, string>();
 
   register(correlationId: string, siteSlug: string, id: string): Promise<void> {

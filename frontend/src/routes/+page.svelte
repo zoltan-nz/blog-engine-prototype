@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
   import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
   import { getSocket } from "$lib/state/socket.svelte";
   import type { SiteView } from "$lib/types/bindings.js";
@@ -144,6 +145,8 @@
                     </span>
                   {/if}
                   {#if isLive && socket.preview.url}
+                    <!-- External Astro preview URL; resolve() is for internal routes. -->
+                    <!-- eslint-disable svelte/no-navigation-without-resolve -->
                     <a
                       href={socket.preview.url}
                       target="_blank"
@@ -151,6 +154,7 @@
                     >
                       Live
                     </a>
+                    <!-- eslint-enable svelte/no-navigation-without-resolve -->
                   {/if}
                 </h2>
                 <p class="font-mono text-sm text-surface-600-400">
@@ -169,7 +173,7 @@
                 </button>
               {/if}
               <a
-                href={`/sites/${site.slug}`}
+                href={resolve("/sites/[slug]", { slug: site.slug })}
                 class="btn preset-outlined-surface-300-700 btn-sm"
                 aria-disabled={busy}
               >

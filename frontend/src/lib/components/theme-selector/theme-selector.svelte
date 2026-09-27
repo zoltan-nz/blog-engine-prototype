@@ -48,7 +48,7 @@
       case "light":
         document.documentElement.setAttribute("data-mode", "light");
         break;
-      case "system":
+      case "system": {
         const prefersDark = window.matchMedia(
           "(prefers-color-scheme: dark)",
         ).matches;
@@ -57,6 +57,7 @@
           prefersDark ? "dark" : "light",
         );
         break;
+      }
     }
   }
 </script>
@@ -76,7 +77,7 @@
       >
         <!-- Theme list -->
         <ul class="max-h-64 overflow-y-auto p-1">
-          {#each themeNames as theme}
+          {#each themeNames as theme (theme)}
             <li>
               <button
                 class="flex w-full items-center gap-3 rounded px-2 py-1.5 text-xs capitalize transition-colors hover:preset-tonal-surface"
@@ -99,7 +100,7 @@
         <div class="border-t border-surface-200-800 p-2">
           <p class="mb-1.5 px-1 text-xs text-surface-600-400">Mode</p>
           <div class="grid grid-cols-3 gap-1">
-            {#each ["system", "light", "dark"] as const as m}
+            {#each ["system", "light", "dark"] as const as m (m)}
               <button
                 class="btn text-xs capitalize transition-colors btn-sm"
                 class:preset-filled-primary-500={mode === m}
