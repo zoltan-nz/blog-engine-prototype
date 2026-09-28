@@ -43,6 +43,7 @@ mise run export-types
 | Astro preview (when running) | http://localhost:4321 |
 | Health | `GET http://localhost:8080/healthz` |
 | Control protocol | `ws://localhost:8080/ws` |
+| Site files (read-only `src/`) | `GET http://localhost:8080/site-files/{slug}/{path}` |
 
 ## Common tasks
 

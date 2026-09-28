@@ -12,7 +12,7 @@ Frontend module map: [`ARCHITECTURE.md`](./ARCHITECTURE.md).
   or other HTML elements. Place all `{@const}` declarations at the top of the block they belong to.
 - **Server state comes from the WebSocket store:** use `getSocket()` from `$lib/state/socket.svelte` — commands
   (`createSite()`, `deleteSite()`, `startPreview()`, …) return a `correlation_id`, and state updates arrive as
-  broadcast events into `socket.sites` / `socket.preview`. Never fetch server state over HTTP (only `/healthz` is HTTP).
+  broadcast events into `socket.sites` / `socket.preview`. Never fetch server state over HTTP. The only other HTTP route is read-only `/site-files/…`, used for images in the post editor.
 - **Wire types are generated:** import from `$lib/types/bindings.js`; regenerate with `mise run export-types`
   after changing `backend/src/types.rs`. Never edit `bindings.ts` by hand.
 

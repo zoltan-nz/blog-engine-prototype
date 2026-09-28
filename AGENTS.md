@@ -85,7 +85,7 @@ Layer READMEs document env vars and package-local `cargo` / `pnpm` commands. Kee
 
 ## Architecture invariants (do not regress without an explicit decision)
 
-1. Application protocol is **WebSocket-only** (`/ws`); HTTP is `/healthz` + static SPA.
+1. Application protocol is **WebSocket-only** (`/ws`); HTTP is `/healthz`, read-only `/site-files/{slug}/{*path}` (a site's `src/`, so the editor can show post images), and the static SPA.
 2. Wire types live in `backend/src/types.rs` and are exported with specta — never hand-edit `bindings.ts`.
 3. Domain transitions go through FSMs in `backend/src/fsm/`; reject illegal commands with typed errors.
 4. No Docker-based workflow in this repo currently.

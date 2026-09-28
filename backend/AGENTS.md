@@ -64,7 +64,7 @@ struct Config {
 
 ## Protocol surface
 
-- HTTP handlers: only `healthz` (plus static SPA fallback outside handlers)
+- HTTP handlers: `healthz` and read-only `site_files` (plus static SPA fallback outside handlers)
 - Domain ops: `ws::dispatch` on `Command` variants; outcomes are `Event` broadcasts
 - Prefer verb-first internal names: `dispatch_command`, `start_preview`, `scaffold_site`, `stop_preview`
 - Wire types: `src/types.rs` — after changes run `mise run export-types` (or `cargo run --bin export-types`)

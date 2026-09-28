@@ -1,8 +1,9 @@
 # backend
 
 Rust/Axum backend for the Blog Engine. Serves the SvelteKit SPA, exposes
-`GET /healthz` (HTTP) and `GET /ws` — the typed WebSocket protocol that carries
-all site/preview/build/post operations. Domain state is governed by finite
+`GET /healthz` (HTTP), `GET /site-files/{slug}/{*path}` (read-only files from a
+site's `src/`, so the editor can show post images) and `GET /ws` — the typed
+WebSocket protocol that carries all site/preview/build/post operations. Domain state is governed by finite
 state machines in `src/fsm/`; wire types in `src/types.rs` are exported to
 TypeScript via specta. Blog posts (`src/astro/posts.rs`) are markdown files
 with YAML frontmatter under each site's `src/content/blog/` — CRUD is a

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from "svelte";
-  import { Crepe } from "@milkdown/crepe";
+  import { Crepe, CrepeFeature } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/classic.css";
-  import { getSocket } from "$lib/state/socket.svelte";
+  import { backendUrl, getSocket } from "$lib/state/socket.svelte";
+  import { resolveSiteFileUrl } from "./site-file-url.js";
   import { createAutosave } from "$lib/state/autosave.svelte.js";
   import type { PostMeta } from "$lib/types/bindings.js";
 
@@ -43,7 +44,18 @@
     void (async () => {
       const body = await socket.requestPost(siteSlug, post.id);
       if (destroyed || !editorRoot) return;
-      crepe = new Crepe({ root: editorRoot, defaultValue: body });
+      // Show images from the site's own files; the saved markdown keeps
+      // its original URLs.
+      crepe = new Crepe({
+        root: editorRoot,
+        defaultValue: body,
+        featureConfigs: {
+          [CrepeFeature.ImageBlock]: {
+            proxyDomURL: (url: string) =>
+              resolveSiteFileUrl(backendUrl, siteSlug, post.id, url),
+          },
+        },
+      });
       await crepe.create();
       crepe.on((listener) => {
         listener.markdownUpdated((_ctx, markdown) => {

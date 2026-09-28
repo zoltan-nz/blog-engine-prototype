@@ -3,7 +3,7 @@
 ## Overview
 
 - **One process:** Rust/Axum binary (`blog-engine-api`).
-- **Three HTTP surfaces:** `GET /healthz`, `GET /ws` (WebSocket), static SPA.
+- **Four HTTP surfaces:** `GET /healthz`, `GET /ws` (WebSocket), `GET /site-files/{slug}/{*path}` (read-only files from a site's `src/`), static SPA.
 - **No database.** Site list lives in `{SITES_DIR}/sites.json`; site files live under `{SITES_DIR}/{slug}/`.
 - **Blog posts are markdown files.** Each site's posts live at `{SITES_DIR}/{slug}/src/content/blog/{id}.md` (Astro content collection); the backend reads/writes these directly, no separate post database.
 - **No OpenAPI / REST resource API.** Application ops go over the typed WebSocket protocol.
@@ -19,6 +19,7 @@ Browser
 Axum :8080
   ├── GET /healthz
   ├── GET /ws  ──► dispatch Command → FSM + astro/* → broadcast Event
+  ├── GET /site-files/{slug}/{*path} ──► {SITES_DIR}/{slug}/src (read-only)
   └── static SPA (ServeDir in dev; rust-embed with --features embed)
           │
           ├── sites.json + site folders under SITES_DIR

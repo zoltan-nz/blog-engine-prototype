@@ -21,8 +21,9 @@ Feature flag:
 |--------|----------------|
 | `app` | Build the Axum `Router`, hydrate sites from disk into `AppState` |
 | `config` | `SITES_DIR`, `PREVIEW_PORT`, `FRONTEND_DIR` via envy + dotenvy |
-| `routes` | HTTP route table: `/healthz`, `/ws` only |
+| `routes` | HTTP route table: `/healthz`, `/ws`, `/site-files/{slug}/{*path}` |
 | `handlers/healthz` | Liveness probe |
+| `handlers/site_files` | Read-only `ServeDir` over a known site's `src/`; 404 for unknown slugs |
 | `ws/socket` | WebSocket upgrade and connection loop |
 | `ws/dispatch` | `Command` → FSM + `astro::*` → broadcast `Event` |
 | `fsm/site` | Pure `SiteState` transitions |
@@ -40,6 +41,7 @@ Feature flag:
 
 ```
 HTTP GET /healthz  → handlers::healthz
+HTTP GET /site-files/{slug}/{*path} → handlers::site_files::site_file
 HTTP GET /ws       → ws::socket::upgrade_ws
                      → parse WsEnvelope
                      → ws::dispatch (async work + Event fan-out)

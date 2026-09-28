@@ -4,6 +4,10 @@
 // augments the module's public type surface to what we actually use;
 // remove once an upstream release fixes lib/types/index.d.ts.
 declare module "@milkdown/crepe" {
+  export enum CrepeFeature {
+    ImageBlock = "image-block",
+  }
+
   export interface CrepeConfig {
     root?: Node | string | null;
     defaultValue?: string;
