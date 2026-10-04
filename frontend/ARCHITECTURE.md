@@ -13,23 +13,27 @@ module map for `frontend/` as agents and humans extend the admin UI.
 
 ```
 UI components
-    │  call getSocket().createSite / startPreview / …
+    │  call getSocket().createSite / startPreview / createPost / …
     ▼
 BlogSocket (src/lib/state/socket.svelte.ts)
     │  send WsEnvelope{ Command }
-    │  receive Snapshot | SiteChanged | PreviewChanged | BuildLog | Error | Pong
+    │  receive Snapshot | SiteChanged | SiteRemoved | PreviewChanged | BuildLog
+    │          | PostChanged | PostRemoved | PostBody | Error | Pong
     ▼
-$state: sites, preview, buildLogs, lastError, status
+$state: sites, preview, posts, buildLogs, lastError, status
     │
     ▼
-Reactive UI (routes, cards, footer connection badge)
+Reactive UI (site list, post list + editor, footer connection badge)
 ```
 
 Rules:
 
-- Server state is **push-only**. Do not introduce HTTP resource clients for sites/preview.
+- Server state is **push-only**. Do not introduce HTTP resource clients; the only HTTP read is `/site-files/…`
+  for post-editor images.
 - On (re)connect the server sends a full `Snapshot`; the client replaces local lists — no event replay.
 - Commands return a `correlation_id`; match `Event::Error` for that id when showing failures.
+- Request/reply: `requestPost()` (`GetPost` → `PostBody`) and `updatePost()` (`UpdatePost` → `PostChanged`) return
+  promises tracked by `PendingRequests` / `PendingUpdates` in `socket.svelte.ts`.
 
 ## Directory map
 
@@ -38,10 +42,13 @@ Rules:
 | `src/routes/+page.svelte`        | Main admin UI (site list, create dialog, actions) |
 | `src/routes/+layout.svelte`      | Shell, theme/font setup                           |
 | `src/routes/+layout.ts`          | `ssr = false` (SPA)                               |
+| `src/routes/sites/[slug]/`       | Site page: post list + editor, preview switching  |
 | `src/lib/state/socket.svelte.ts` | WebSocket client, reducers, connection lifecycle  |
+| `src/lib/state/autosave.svelte.ts` | Debounced, single-flight post saves             |
+| `src/lib/state/preview-switch.ts` | Pure decision: start/stop preview on the site page |
 | `src/lib/state/font.svelte.ts`   | Client-only font preference                       |
 | `src/lib/types/bindings.ts`      | **Generated** wire types — never hand-edit        |
-| `src/lib/components/`            | Footer, theme selector, font selector             |
+| `src/lib/components/`            | Footer, theme/font selectors, `post-list/`, `post-editor/` (Milkdown Crepe) |
 | `src/lib/test/mocks/`            | Env + socket mocks for Vitest                     |
 
 ## Wire types
@@ -60,6 +67,7 @@ Import as `$lib/types/bindings.js` (SvelteKit ESM convention).
 - Svelte 5 runes (`$state`, `$derived`, …)
 - Skeleton v5 + Tailwind v4
 - Icons: `@lucide/svelte`
+- Post editor: Milkdown Crepe (`@milkdown/crepe`)
 
 ## Tests
 
@@ -72,6 +80,6 @@ Import as `$lib/types/bindings.js` (SvelteKit ESM convention).
 ## Invariants when extending
 
 1. New domain fields/actions start in Rust `types.rs` + FSM/dispatch, then export-types, then UI.
-2. Keep pure list reducers (`upsertSite`, `removeSite`, …) testable without a browser when possible.
+2. Keep pure list reducers (`upsertSite`, `removeSite`, `upsertPost`, `removePost`, …) testable without a browser when possible.
 3. Do not reintroduce TanStack Query (or similar) for backend domain state unless the architecture deliberately changes.
 4. Prefer Skeleton primitives over one-off markup for dialogs, badges, and layout.

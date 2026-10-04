@@ -24,8 +24,6 @@ One backend binary and one frontend SPA.
 | `integration-tests/` | Playwright (host, not Docker) |
 | `.claude/specs/` | Historical design notes |
 
-Don't invent service names or `test-{service}` tasks that aren't in `mise.toml`.
-
 ## Commands (source of truth: `mise.toml`)
 
 | Intent | Command |

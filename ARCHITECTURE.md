@@ -73,10 +73,10 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 |------|------|
 | `backend/src/ws/` | Upgrade, dispatch, fan-out |
 | `backend/src/fsm/` | Pure site/preview transitions |
-| `backend/src/astro/` | Manifest, scaffold, preview child, build, post CRUD |
+| `backend/src/astro/` | Manifest, scaffold, preview child, build, post CRUD, per-site file watcher |
 | `backend/src/types.rs` | Specta wire types |
 | `frontend/src/lib/state/socket.svelte.ts` | Client store + reconnect |
 
 ## Specs
 
-Active: `.claude/specs/0008-post-realtime-sync.md` — post realtime sync (fix scaffold, fix cache, watcher).
+No active spec. `.claude/specs/` is history; 0008 (post realtime sync) is implemented.

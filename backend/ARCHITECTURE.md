@@ -19,7 +19,7 @@ Feature flag:
 
 | Module | Responsibility |
 |--------|----------------|
-| `app` | Build the Axum `Router`, hydrate sites from disk into `AppState` |
+| `app` | Build the Axum `Router`, hydrate sites from disk into `AppState`, start a watcher per site |
 | `config` | `SITES_DIR`, `PREVIEW_PORT`, `FRONTEND_DIR` via envy + dotenvy |
 | `routes` | HTTP route table: `/healthz`, `/ws`, `/site-files/{slug}/{*path}` |
 | `handlers/healthz` | Liveness probe |
@@ -32,8 +32,9 @@ Feature flag:
 | `astro/posts` | Post CRUD: frontmatter parse/render, list/read/create/update/delete, atomic writes |
 | `astro/preview` | Spawn / stop Astro `pnpm dev`, readiness poll |
 | `astro/build` | Production build + log streaming |
+| `astro/watch` | Per-site debounced watcher on `src/content/blog/`; emits `PostChanged` / `PostRemoved` for external edits |
 | `astro/error` | Typed process / IO errors |
-| `state` | Shared `AppState` (sites map, preview handle, broadcast channel) |
+| `state` | Shared `AppState` (sites map with posts cache, preview handle, per-site watchers, broadcast channel) |
 | `types` | Specta wire types: `Command`, `Event`, `WsEnvelope`, views |
 | `telemetry` | Tracing subscriber setup |
 
@@ -60,5 +61,5 @@ fallback           → SPA (disk or embedded)
 ## Tests
 
 - Unit: `cargo test` (FSM arms, wire serde, astro helpers, WS dispatch where covered)
-- Process-level HTTP/WS: `axum-test` in-crate where present
+- Process-level HTTP/WS: `axum-test` in `backend/tests/` (`e2e_healthz`, `e2e_site_files`, `ws_protocol`)
 - Full UI lifecycle: `integration-tests/` via `mise run test`
