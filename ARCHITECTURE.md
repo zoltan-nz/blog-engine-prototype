@@ -72,6 +72,7 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 | Path | Role |
 |------|------|
 | `backend/src/ws/` | Upgrade, dispatch, fan-out |
+| `backend/src/agent.rs` | Spike: `DraftPost` runs the user's Claude Code over ACP; the new file reaches clients via the watcher's `PostChanged` |
 | `backend/src/fsm/` | Pure site/preview transitions |
 | `backend/src/astro/` | Manifest, scaffold, preview child, build, post CRUD, per-site file watcher |
 | `backend/src/types.rs` | Specta wire types |

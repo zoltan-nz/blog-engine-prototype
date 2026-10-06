@@ -90,6 +90,13 @@ pub enum Command {
         site_slug: String,
         id: String,
     },
+    /// Asks the AI agent to write a new post `id` about `topic`. The result
+    /// arrives as a normal `PostChanged` once the agent writes the file.
+    DraftPost {
+        site_slug: String,
+        id: String,
+        topic: String,
+    },
 }
 
 /// A site as the frontend sees it: identity plus current FSM state.

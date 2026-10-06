@@ -26,6 +26,7 @@ describe("PostList", () => {
     fakeSocket.posts = {};
     fakeSocket.createPost = vi.fn();
     fakeSocket.deletePost = vi.fn();
+    fakeSocket.draftPost = vi.fn(() => new Promise<void>(() => {}));
     vi.stubGlobal(
       "confirm",
       vi.fn(() => true),
@@ -112,5 +113,45 @@ describe("PostList", () => {
     expect(onSelect).toHaveBeenCalledWith(
       post("a-post", "A Post", "2026-01-01"),
     );
+  });
+
+  it("asks the AI agent to draft a post from a topic and shows it as drafting", async () => {
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
+
+    await page.getByRole("button", { name: "Draft with AI" }).click();
+    await page.getByLabelText("Topic").fill("Why static sites are cheap");
+    await page.getByRole("button", { name: "Draft", exact: true }).click();
+
+    expect(fakeSocket.draftPost).toHaveBeenCalledWith(
+      "my-blog",
+      "why-static-sites-are-cheap",
+      "Why static sites are cheap",
+    );
+    await expect
+      .element(page.getByText(/drafting.*why static sites are cheap/i))
+      .toBeInTheDocument();
+  });
+
+  it("shows why a draft failed", async () => {
+    fakeSocket.draftPost = vi.fn(() =>
+      Promise.reject({
+        code: "Internal",
+        message: "agent failed: not signed in",
+        correlationId: "c-1",
+      }),
+    );
+    await render(PostList, {
+      props: { siteSlug: "my-blog", onSelect: vi.fn() },
+    });
+
+    await page.getByRole("button", { name: "Draft with AI" }).click();
+    await page.getByLabelText("Topic").fill("Anything");
+    await page.getByRole("button", { name: "Draft", exact: true }).click();
+
+    await expect
+      .element(page.getByText("agent failed: not signed in"))
+      .toBeInTheDocument();
   });
 });

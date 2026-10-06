@@ -8,8 +8,8 @@ Generic Svelte/pnpm rules live in `~/.claude/rules/frontend.md`.
 - **UI kit:** Skeleton v5 + Tailwind v4 (`@skeletonlabs/skeleton`, `@skeletonlabs/skeleton-svelte`). Not shadcn.
 - **Server state comes from the WebSocket store:** `getSocket()` from `$lib/state/socket.svelte`. Fire-and-forget
   commands (`createSite()`, `startPreview()`, `createPost()`, …) return a `correlation_id`; state arrives as
-  broadcasts into `socket.sites` / `socket.preview` / `socket.posts`. `updatePost()` and `requestPost()` return
-  promises settled by the matching event. Never fetch server state over HTTP; the only other HTTP route is
+  broadcasts into `socket.sites` / `socket.preview` / `socket.posts`. `updatePost()`, `draftPost()` and `requestPost()`
+  return promises settled by the matching event. Never fetch server state over HTTP; the only other HTTP route is
   read-only `/site-files/…` for post-editor images.
 - **Wire types are generated:** import from `$lib/types/bindings.js`; regenerate with `mise run export-types`.
 - **Backend URL:** `PUBLIC_API_BACKEND_URL` (see `socket.svelte.ts`); defaults to `http://localhost:8080`.

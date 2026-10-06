@@ -1,3 +1,4 @@
+use crate::agent;
 use crate::astro;
 use crate::astro::error::AstroError;
 use crate::fsm;
@@ -113,6 +114,13 @@ pub async fn dispatch_command(
         }
         Command::GetPost { site_slug, id } => {
             get_post(correlation_id, site_slug, id, tx, state).await;
+        }
+        Command::DraftPost {
+            site_slug,
+            id,
+            topic,
+        } => {
+            draft_post(correlation_id, site_slug, id, topic, tx, state).await;
         }
     }
 }
@@ -481,6 +489,71 @@ async fn validated_site_dir(
         return None;
     }
     Some(state.sites_dir.join(site_slug))
+}
+
+async fn draft_post(
+    correlation_id: String,
+    site_slug: String,
+    id: String,
+    topic: String,
+    tx: mpsc::Sender<WsEnvelope>,
+    state: Arc<AppState>,
+) {
+    let Some(site_dir) = validated_site_dir(&state, &tx, &correlation_id, &site_slug, &id).await
+    else {
+        return;
+    };
+    if topic.trim().is_empty() {
+        send_error(
+            &tx,
+            correlation_id,
+            ErrorCode::InvalidInput,
+            "topic is empty".to_string(),
+        )
+        .await;
+        return;
+    }
+    // The permission policy lets the agent edit any post, so refuse up front
+    // rather than let a "new" draft overwrite an existing one.
+    let post_file = site_dir
+        .join(astro::posts::CONTENT_DIR)
+        .join(format!("{id}.md"));
+    if post_file.exists() {
+        send_error(
+            &tx,
+            correlation_id,
+            ErrorCode::PostAlreadyExists,
+            format!("post '{id}' already exists"),
+        )
+        .await;
+        return;
+    }
+
+    match agent::draft_post(&site_dir, &id, &topic).await {
+        Ok(stop_reason) if post_file.exists() => {
+            info!(?stop_reason, %site_slug, %id, "agent draft finished");
+        }
+        // Success is otherwise signalled only by the watcher's `PostChanged`;
+        // without this the client would wait forever on a draft that never came.
+        Ok(stop_reason) => {
+            send_error(
+                &tx,
+                correlation_id,
+                ErrorCode::Internal,
+                format!("agent finished ({stop_reason:?}) without writing the post"),
+            )
+            .await;
+        }
+        Err(error) => {
+            send_error(
+                &tx,
+                correlation_id,
+                ErrorCode::Internal,
+                format!("agent failed: {error}"),
+            )
+            .await;
+        }
+    }
 }
 
 /// Replaces this post's cache entry (or inserts it), keeping the site's post

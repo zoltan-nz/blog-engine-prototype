@@ -371,6 +371,17 @@ export class BlogSocket {
     return this.#pendingUpdates.register(correlationId, siteSlug, id);
   }
 
+  /** Asks the AI agent to write post `id` about `topic`. Resolves when the
+   * agent's file lands (the watcher's `PostChanged`), rejects on a correlated
+   * `Error` — same matching as `updatePost`. Takes minutes, not milliseconds. */
+  draftPost(siteSlug: string, id: string, topic: string): Promise<void> {
+    const correlationId = this.send({
+      type: "DraftPost",
+      payload: { site_slug: siteSlug, id, topic },
+    });
+    return this.#pendingUpdates.register(correlationId, siteSlug, id);
+  }
+
   /** Resolves with the post's markdown body once the matching `PostBody` (or
    * rejects on a correlated `Error`) arrives. */
   requestPost(siteSlug: string, id: string): Promise<string> {

@@ -8,6 +8,7 @@
     reason = "guards intentionally held for their scope"
 )]
 
+pub mod agent;
 pub mod app;
 pub mod astro;
 pub mod config;

@@ -25,6 +25,7 @@ export const fakeSocket = {
   createPost: vi.fn(),
   deletePost: vi.fn(),
   updatePost: vi.fn(),
+  draftPost: vi.fn(),
   dismissError: vi.fn(),
   close: vi.fn(),
 };

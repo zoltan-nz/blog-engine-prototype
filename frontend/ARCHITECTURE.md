@@ -32,8 +32,8 @@ Rules:
   for post-editor images.
 - On (re)connect the server sends a full `Snapshot`; the client replaces local lists — no event replay.
 - Commands return a `correlation_id`; match `Event::Error` for that id when showing failures.
-- Request/reply: `requestPost()` (`GetPost` → `PostBody`) and `updatePost()` (`UpdatePost` → `PostChanged`) return
-  promises tracked by `PendingRequests` / `PendingUpdates` in `socket.svelte.ts`.
+- Request/reply: `requestPost()` (`GetPost` → `PostBody`), `updatePost()` (`UpdatePost` → `PostChanged`), and
+  `draftPost()` (`DraftPost` → `PostChanged` once the AI agent writes the file) return promises tracked by `PendingRequests` / `PendingUpdates` in `socket.svelte.ts`.
 
 ## Directory map
 
