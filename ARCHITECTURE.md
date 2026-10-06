@@ -80,4 +80,4 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 
 ## Specs
 
-No active spec. `.claude/specs/` is history; 0008 (post realtime sync) is implemented.
+Active spec: `.claude/specs/0009-blog-workspace-and-ai.md` (draft for review). Earlier specs are history; 0008 (post realtime sync) is implemented.
