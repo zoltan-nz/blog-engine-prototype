@@ -3,10 +3,10 @@
   import { Crepe, CrepeFeature } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/classic.css";
-  import { backendUrl, getSocket } from "$lib/state/socket.svelte";
+  import { backendUrl, getSocket } from "#lib/state/socket.svelte.js";
   import { resolveSiteFileUrl } from "./site-file-url.js";
-  import { createAutosave } from "$lib/state/autosave.svelte.js";
-  import type { PostMeta } from "$lib/types/bindings.js";
+  import { createAutosave } from "#lib/state/autosave.svelte.js";
+  import type { PostMeta } from "#lib/types/bindings.js";
 
   let { siteSlug, post }: { siteSlug: string; post: PostMeta } = $props();
 

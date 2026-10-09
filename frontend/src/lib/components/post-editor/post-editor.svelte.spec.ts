@@ -2,11 +2,11 @@ import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-svelte";
 import PostEditor from "./post-editor.svelte";
-import { fakeSocket } from "$lib/test/mocks/socket.js";
-import type { PostMeta } from "$lib/types/bindings.js";
+import { fakeSocket } from "#lib/test/mocks/socket.js";
+import type { PostMeta } from "#lib/types/bindings.js";
 
-vi.mock("$lib/state/socket.svelte", async () => {
-  const { fakeSocket } = await import("$lib/test/mocks/socket.js");
+vi.mock("#lib/state/socket.svelte.js", async () => {
+  const { fakeSocket } = await import("#lib/test/mocks/socket.js");
   return {
     backendUrl: "http://localhost:8080",
     getSocket: () => fakeSocket,

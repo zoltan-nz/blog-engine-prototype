@@ -1,4 +1,7 @@
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - "@sveltejs/kit"
+  - "@sveltejs/adapter-static"
 blockExoticSubdeps: true
 allowBuilds:
   sharp: true

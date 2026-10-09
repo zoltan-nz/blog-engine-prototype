@@ -5,7 +5,7 @@
     type ThemeName,
     themeNames,
   } from "./theme-names.ts";
-  import { fontStore } from "$lib/state/font.svelte";
+  import { fontStore } from "#lib/state/font.svelte.js";
   import ColorSwatch from "./color-swatch.svelte";
   import { ChevronDownIcon, Check } from "@lucide/svelte";
 

@@ -1,4 +1,4 @@
-import type { PreviewView } from "$lib/types/bindings.js";
+import type { PreviewView } from "#lib/types/bindings.js";
 
 export type PreviewAction = "none" | "start" | "stop-then-start";
 

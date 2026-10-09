@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backendUrl, getSocket } from "$lib/state/socket.svelte";
+  import { backendUrl, getSocket } from "#lib/state/socket.svelte.js";
   import ThemeSelector from "./theme-selector/theme-selector.svelte";
   import FontSelector from "./font-selector/font-selector.svelte";
 

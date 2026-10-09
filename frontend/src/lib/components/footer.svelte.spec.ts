@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-svelte";
 import Footer from "./footer.svelte";
 
-vi.mock("$lib/state/socket.svelte", async () => {
-  const { fakeSocket } = await import("$lib/test/mocks/socket.js");
+vi.mock("#lib/state/socket.svelte.js", async () => {
+  const { fakeSocket } = await import("#lib/test/mocks/socket.js");
   return {
     backendUrl: "http://test-backend.test:8080",
     getSocket: () => fakeSocket,

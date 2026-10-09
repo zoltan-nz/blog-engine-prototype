@@ -1,7 +1,7 @@
 // Non-reactive stand-in for BlogSocket used by component tests. Tests assign
 // to the fields directly before render.
-import type { BuildLogLine, ProtocolError } from "$lib/state/socket.svelte";
-import type { PostMeta, PreviewView, SiteView } from "$lib/types/bindings.js";
+import type { BuildLogLine, ProtocolError } from "#lib/state/socket.svelte.js";
+import type { PostMeta, PreviewView, SiteView } from "#lib/types/bindings.js";
 import { vi } from "vitest";
 
 export const fakeSocket = {

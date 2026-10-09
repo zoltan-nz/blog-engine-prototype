@@ -2,10 +2,10 @@ import { page } from "vitest/browser";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-svelte";
 import Page from "./+page.svelte";
-import { fakeSocket } from "$lib/test/mocks/socket.js";
+import { fakeSocket } from "#lib/test/mocks/socket.js";
 
-vi.mock("$lib/state/socket.svelte", async () => {
-  const { fakeSocket } = await import("$lib/test/mocks/socket.js");
+vi.mock("#lib/state/socket.svelte.js", async () => {
+  const { fakeSocket } = await import("#lib/test/mocks/socket.js");
   return {
     backendUrl: "http://localhost:8080",
     getSocket: () => fakeSocket,

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
-  import { getSocket } from "$lib/state/socket.svelte";
-  import { decidePreviewAction } from "$lib/state/preview-switch.js";
-  import PostList from "$lib/components/post-list/post-list.svelte";
-  import PostEditor from "$lib/components/post-editor/post-editor.svelte";
+  import { getSocket } from "#lib/state/socket.svelte.js";
+  import { decidePreviewAction } from "#lib/state/preview-switch.js";
+  import PostList from "#lib/components/post-list/post-list.svelte";
+  import PostEditor from "#lib/components/post-editor/post-editor.svelte";
   import { ArrowLeft, LoaderCircle } from "@lucide/svelte";
-  import type { PostMeta } from "$lib/types/bindings.js";
+  import type { PostMeta } from "#lib/types/bindings.js";
 
   const socket = getSocket();
   let selectedPost = $state<PostMeta | null>(null);

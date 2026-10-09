@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
-  import { getSocket } from "$lib/state/socket.svelte";
-  import type { PostMeta } from "$lib/types/bindings.js";
-  import type { ProtocolError } from "$lib/state/socket.svelte";
+  import { getSocket } from "#lib/state/socket.svelte.js";
+  import type { PostMeta } from "#lib/types/bindings.js";
+  import type { ProtocolError } from "#lib/state/socket.svelte.js";
   import { LoaderCircle, Plus, Sparkles, Trash2 } from "@lucide/svelte";
   import { slugify } from "./slugify.js";
 

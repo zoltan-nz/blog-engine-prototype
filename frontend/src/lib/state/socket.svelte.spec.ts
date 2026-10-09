@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   PendingRequests,
   PendingUpdates,
@@ -7,7 +7,12 @@ import {
   upsertPost,
   upsertSite,
 } from "./socket.svelte";
-import type { PostMeta, SiteView } from "$lib/types/bindings.js";
+import type { PostMeta, SiteView } from "#lib/types/bindings.js";
+
+// SvelteKit generates $app/env/public at build time; the unit test only needs a stub.
+vi.mock("$app/env/public", () => ({
+  PUBLIC_API_BACKEND_URL: "http://localhost:8080",
+}));
 
 const ready = (slug: string): SiteView => ({
   slug,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
   import { fonts } from "./font-names.ts";
-  import { fontStore } from "$lib/state/font.svelte";
+  import { fontStore } from "#lib/state/font.svelte.js";
   import { Check, Type, ChevronDown } from "@lucide/svelte";
 
   const currentFont = $derived(

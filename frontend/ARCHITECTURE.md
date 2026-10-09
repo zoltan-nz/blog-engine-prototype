@@ -37,19 +37,19 @@ Rules:
 
 ## Directory map
 
-| Path                             | Role                                              |
-| -------------------------------- | ------------------------------------------------- |
-| `src/routes/+page.svelte`        | Main admin UI (site list, create dialog, actions) |
-| `src/routes/+layout.svelte`      | Shell, theme/font setup                           |
-| `src/routes/+layout.ts`          | `ssr = false` (SPA)                               |
-| `src/routes/sites/[slug]/`       | Site page: post list + editor, preview switching  |
-| `src/lib/state/socket.svelte.ts` | WebSocket client, reducers, connection lifecycle  |
-| `src/lib/state/autosave.svelte.ts` | Debounced, single-flight post saves             |
-| `src/lib/state/preview-switch.ts` | Pure decision: start/stop preview on the site page |
-| `src/lib/state/font.svelte.ts`   | Client-only font preference                       |
-| `src/lib/types/bindings.ts`      | **Generated** wire types — never hand-edit        |
-| `src/lib/components/`            | Footer, theme/font selectors, `post-list/`, `post-editor/` (Milkdown Crepe) |
-| `src/lib/test/mocks/`            | Env + socket mocks for Vitest                     |
+| Path                               | Role                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `src/routes/+page.svelte`          | Main admin UI (site list, create dialog, actions)                           |
+| `src/routes/+layout.svelte`        | Shell, theme/font setup                                                     |
+| `src/routes/+layout.ts`            | `ssr = false` (SPA)                                                         |
+| `src/routes/sites/[slug]/`         | Site page: post list + editor, preview switching                            |
+| `src/lib/state/socket.svelte.ts`   | WebSocket client, reducers, connection lifecycle                            |
+| `src/lib/state/autosave.svelte.ts` | Debounced, single-flight post saves                                         |
+| `src/lib/state/preview-switch.ts`  | Pure decision: start/stop preview on the site page                          |
+| `src/lib/state/font.svelte.ts`     | Client-only font preference                                                 |
+| `src/lib/types/bindings.ts`        | **Generated** wire types — never hand-edit                                  |
+| `src/lib/components/`              | Footer, theme/font selectors, `post-list/`, `post-editor/` (Milkdown Crepe) |
+| `src/lib/test/mocks/`              | Env + socket mocks for Vitest                                               |
 
 ## Wire types
 
@@ -60,7 +60,7 @@ mise run export-types
 # → frontend/src/lib/types/bindings.ts
 ```
 
-Import as `$lib/types/bindings.js` (SvelteKit ESM convention).
+Import as `#lib/types/bindings.js` (declared in `package.json` `imports`; SvelteKit 3 has no `$lib`).
 
 ## UI stack
 

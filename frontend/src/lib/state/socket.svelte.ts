@@ -1,4 +1,4 @@
-import { env } from "$env/dynamic/public";
+import { PUBLIC_API_BACKEND_URL } from "$app/env/public";
 import type {
   Command,
   ErrorCode,
@@ -8,9 +8,9 @@ import type {
   PreviewView,
   SiteView,
   WsEnvelope,
-} from "$lib/types/bindings.js";
+} from "#lib/types/bindings.js";
 
-export const backendUrl = env.PUBLIC_API_BACKEND_URL || "http://localhost:8080";
+export const backendUrl = PUBLIC_API_BACKEND_URL;
 
 const wsUrl = `${backendUrl.replace(/^http/, "ws")}/ws`;
 

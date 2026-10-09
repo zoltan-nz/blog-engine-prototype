@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decidePreviewAction } from "./preview-switch.js";
-import type { PreviewView } from "$lib/types/bindings.js";
+import type { PreviewView } from "#lib/types/bindings.js";
 
 const view = (
   type: PreviewView["state"]["type"],

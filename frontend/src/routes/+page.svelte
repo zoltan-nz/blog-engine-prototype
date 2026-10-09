@@ -1,8 +1,8 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
-  import { getSocket } from "$lib/state/socket.svelte";
-  import type { SiteView } from "$lib/types/bindings.js";
+  import { getSocket } from "#lib/state/socket.svelte.js";
+  import type { SiteView } from "#lib/types/bindings.js";
   import {
     Hammer,
     Loader,
