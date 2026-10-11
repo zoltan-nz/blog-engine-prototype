@@ -21,7 +21,10 @@ pub async fn serve(router: Router, request: Request<Vec<u8>>) -> Response<Vec<u8
     };
     let request_uri = std::mem::replace(&mut parts.uri, uri);
 
-    let response = match router.oneshot(Request::from_parts(parts, Body::from(body))).await {
+    let response = match router
+        .oneshot(Request::from_parts(parts, Body::from(body)))
+        .await
+    {
         Ok(response) => response,
         Err(infallible) => match infallible {},
     };
@@ -71,7 +74,9 @@ mod tests {
 
     #[tokio::test]
     async fn passes_through_not_found() {
-        let request = Request::get("site-files://localhost/").body(Vec::new()).unwrap();
+        let request = Request::get("site-files://localhost/")
+            .body(Vec::new())
+            .unwrap();
 
         let response = serve(echo_router(), request).await;
 

@@ -57,7 +57,7 @@ Posts deliberately have **no FSM**: create/update/delete is a single synchronous
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `SITES_DIR` | `/tmp/astro-sites` | Astro projects + manifest |
+| `SITES_DIR` | `/tmp/astro-sites` (desktop app: `{app data dir}/sites`) | Astro projects + manifest |
 | `PREVIEW_PORT` | `4321` | Astro dev server port |
 | `FRONTEND_DIR` | `../frontend/build` | SPA directory for non-embed builds |
 
@@ -67,7 +67,7 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 
 - Dev: backend without `embed`; SPA from disk (`FRONTEND_DIR`) or Vite separately.
 - Release: `mise run build` → frontend build, then `cargo build --release --features embed`.
-- Desktop (Tauri v2, `src-tauri/`): one process. It calls `backend::app::create_app` in-process with no HTTP server, and the webview loads `frontend/build` through Tauri's asset protocol; the SPA speaks the client protocol over Tauri IPC (`connect` / `send` commands in `src-tauri/src/ipc.rs`, same `WsEnvelope` JSON as `/ws`), so no socket is involved. Editor images load from a `site-files://` custom protocol (`src-tauri/src/site_files.rs`) that forwards to the same `/site-files` route in-process. The footer shows `Backend: in-app` and skips `/healthz`. Window close, SIGINT and SIGTERM all exit through `RunEvent::Exit`, which stops the preview.
+- Desktop (Tauri v2, `src-tauri/`): one process. It calls `backend::app::create_app` in-process with no HTTP server, and the webview loads `frontend/build` through Tauri's asset protocol; the SPA speaks the client protocol over Tauri IPC (`connect` / `send` commands in `src-tauri/src/ipc.rs`, same `WsEnvelope` JSON as `/ws`), so no socket is involved. Editor images load from a `site-files://` custom protocol (`src-tauri/src/site_files.rs`) that forwards to the same `/site-files` route in-process. The footer shows `Backend: in-app` and skips `/healthz`. Unless `SITES_DIR` is set, sites live in Tauri's app-data folder (`src-tauri/src/sites_dir.rs`), not the shared `/tmp/astro-sites`. Window close, SIGINT and SIGTERM all exit through `RunEvent::Exit`, which stops the preview.
 
 ## Key modules
 

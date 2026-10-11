@@ -37,8 +37,9 @@ mise run export-types
 ```
 
 Desktop app (Tauri v2, early): `mise run desktop` builds the SPA and opens it in a native window,
-with the backend running inside the app on `127.0.0.1:8080`. Stop any `mise run backend` first
-so both don't share `SITES_DIR` and the preview port.
+with the backend running inside the app (no HTTP server). Its sites live in the app-data folder
+(`~/Library/Application Support/app.blog-engine.desktop/sites` on macOS) unless `SITES_DIR` is set.
+It still uses preview port 4321, so stop any `mise run backend` preview first.
 
 | Surface | URL |
 |---------|-----|

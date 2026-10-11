@@ -13,6 +13,9 @@ tokio = { version = "1.52.3", features = ["sync"] }
 axum = "0.8.9"
 tracing = "0.1.44"
 tower = "0.5.3"
+serde = { version = "1.0.229", features = ["derive"] }
+envy = "0.4.2"
+dirs = "7.0.0"
 
 [dev-dependencies]
 tokio = { version = "1.52.3", features = ["macros", "rt"] }

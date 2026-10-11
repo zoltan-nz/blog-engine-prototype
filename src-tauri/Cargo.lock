@@ -387,6 +387,9 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "backend",
+ "dirs",
+ "envy",
+ "serde",
  "tauri",
  "tauri-build",
  "tokio",

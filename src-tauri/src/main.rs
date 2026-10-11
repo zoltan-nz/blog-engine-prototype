@@ -3,16 +3,26 @@
 
 mod ipc;
 mod site_files;
+mod sites_dir;
 
 use backend::app::{create_app, shutdown, shutdown_signal};
 use backend::config::Config;
 use backend::telemetry;
+use sites_dir::DesktopEnv;
 use std::sync::Arc;
+use tracing::info;
 
 fn main() {
     telemetry::init_tracing();
 
-    let config = Config::from_env().expect("Failed to load config");
+    let context = tauri::generate_context!();
+
+    // Config::from_env also loads .env, so SITES_DIR there counts too.
+    let mut config = Config::from_env().expect("Failed to load config");
+    let desktop_env: DesktopEnv = envy::from_env().expect("Failed to load desktop config");
+    let data_dir = dirs::data_dir().expect("No user data directory");
+    config.sites_dir = desktop_env.sites_dir(&data_dir, &context.config().identifier);
+    info!(sites_dir = %config.sites_dir.display(), "Sites directory");
 
     // create_app starts per-site watchers that spawn tokio tasks, so it must
     // run inside Tauri's runtime.
@@ -45,7 +55,7 @@ fn main() {
             });
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("Failed to build the Tauri app")
         .run(move |_app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
