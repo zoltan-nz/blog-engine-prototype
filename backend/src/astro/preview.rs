@@ -101,9 +101,27 @@ pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AstroError> {
     let active = state.lock_preview().await.take();
     if let Some(mut preview) = active {
         tracing::info!(slug = %preview.slug, "stopping preview");
-        Box::into_pin(preview.child.kill()).await?;
+        if let Err(err) = preview.child.start_kill() {
+            if !is_group_already_gone(&err) {
+                return Err(err.into());
+            }
+            tracing::warn!(slug = %preview.slug, "preview had already exited");
+        }
+        // Reap the leader (and any group zombies) whether we killed it or not.
+        preview.child.wait().await?;
     }
     Ok(())
+}
+
+/// POSIX errnos `killpg` returns for a group with nothing left to signal.
+const EPERM: i32 = 1;
+const ESRCH: i32 = 3;
+
+/// `ESRCH`: the group no longer exists. `EPERM`: on macOS, `killpg` returns
+/// this when every member of the group is an unreaped zombie, i.e. the
+/// process already exited on its own.
+fn is_group_already_gone(err: &std::io::Error) -> bool {
+    matches!(err.raw_os_error(), Some(EPERM | ESRCH))
 }
 
 #[cfg(test)]
@@ -217,6 +235,28 @@ mod tests {
         if let Some(mut p) = running {
             Box::into_pin(p.child.kill()).await.ok();
         }
+    }
+
+    #[tokio::test]
+    async fn stop_preview_succeeds_when_the_preview_already_exited() {
+        let tmp = TempDir::new().unwrap();
+        let state = make_state(tmp.path());
+
+        // Leader exits immediately and is never reaped: the group holds only a
+        // zombie, which is what a crashed `pnpm dev` leaves behind.
+        let mut command = CommandWrap::with_new("true", |_| {});
+        command.wrap(ProcessGroup::leader());
+        let child = command.spawn().unwrap();
+        tokio::time::sleep(StdDuration::from_millis(300)).await;
+
+        *state.lock_preview().await = Some(ActivePreview {
+            slug: "test-site".to_string(),
+            url: "http://localhost:1".to_string(),
+            child,
+        });
+
+        stop_preview(&state).await.unwrap();
+        assert!(state.lock_preview().await.is_none());
     }
 
     #[tokio::test]
