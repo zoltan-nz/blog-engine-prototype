@@ -86,7 +86,7 @@
         <div
           class="flex flex-col items-center gap-2 p-4 text-center text-error-500"
         >
-          <p>Preview failed to start: {socket.preview.state.payload.reason}</p>
+          <p>Preview failed: {socket.preview.state.payload.reason}</p>
           <button
             class="btn preset-outlined-surface-300-700 btn-sm"
             onclick={() => socket.startPreview(siteSlug)}

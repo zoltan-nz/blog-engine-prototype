@@ -23,8 +23,11 @@ export function decidePreviewAction(
       // A stop is already underway; wait for PreviewChanged(Stopped) rather
       // than issuing a second StopPreview.
       return "none";
-    case "Stopped":
     case "Failed":
+      // A failed preview for this site waits for the user's Retry; restarting
+      // it here would loop forever on a server that keeps crashing.
+      return forTarget ? "none" : "start";
+    case "Stopped":
       return "start";
   }
 }

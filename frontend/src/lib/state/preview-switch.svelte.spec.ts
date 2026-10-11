@@ -25,9 +25,15 @@ describe("decidePreviewAction", () => {
     expect(decidePreviewAction(view("Stopped", null), "my-blog")).toBe("start");
   });
 
-  it("returns 'start' when failed", () => {
+  it("returns 'start' when failed for a different site", () => {
     expect(decidePreviewAction(view("Failed", "other-blog"), "my-blog")).toBe(
       "start",
+    );
+  });
+
+  it("returns 'none' when failed for the target site, so a crashing server is not restarted in a loop", () => {
+    expect(decidePreviewAction(view("Failed", "my-blog"), "my-blog")).toBe(
+      "none",
     );
   });
 

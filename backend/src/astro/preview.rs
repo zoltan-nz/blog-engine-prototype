@@ -4,6 +4,17 @@ use std::time::Duration;
 use crate::astro::error::AstroError;
 use crate::state::{ActivePreview, AppState};
 use process_wrap::tokio::{CommandWrap, ProcessGroup};
+use tokio::process::ChildStdout;
+use tokio::sync::oneshot;
+
+/// A preview that passed its readiness check.
+#[derive(Debug)]
+pub struct StartedPreview {
+    pub url: String,
+    /// Resolves only if the dev server exits on its own (crash, killed from
+    /// outside); dropped without firing when the preview is stopped.
+    pub exited: oneshot::Receiver<()>,
+}
 
 /// Spawns `pnpm dev --port <port>` in the site's directory and waits until the
 /// port accepts connections (max 30s).
@@ -20,12 +31,16 @@ use process_wrap::tokio::{CommandWrap, ProcessGroup};
 /// - `PortInUse` — something still listens on `port` after a short grace period
 /// - `DevServerTimeout` — port never became reachable within the deadline
 /// - `Io` — process spawn failed
+///
+/// # Panics
+/// Never in practice: a just-spawned child always has a PID.
 pub async fn start_preview(
     state: &Arc<AppState>,
     slug: &str,
     port: u16,
-) -> Result<String, AstroError> {
+) -> Result<StartedPreview, AstroError> {
     let url = format!("http://localhost:{port}");
+    let (exited_tx, exited) = oneshot::channel();
     let site_dir = state.sites_dir.join(slug);
     if !site_dir.exists() {
         return Err(AstroError::SiteNotFound(slug.to_string()));
@@ -64,16 +79,23 @@ pub async fn start_preview(
                 "0.0.0.0",
                 "--ignore-lock",
             ])
-                .env_remove("PNPM_SCRIPT_SRC_DIR")
-                .current_dir(&site_dir)
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped());
+            .env_remove("PNPM_SCRIPT_SRC_DIR")
+            .current_dir(&site_dir)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
         });
         command.wrap(ProcessGroup::leader());
         let mut child = command.spawn()?;
+        let pid = child.id().expect("a just-spawned child has a PID");
         // Without this the dev server's output (and why it died) is lost.
         if let Some(out) = child.stdout().take() {
-            tokio::spawn(log_lines(slug.to_string(), out));
+            tokio::spawn(watch_exit(
+                Arc::clone(state),
+                slug.to_string(),
+                pid,
+                out,
+                exited_tx,
+            ));
         }
         if let Some(err) = child.stderr().take() {
             tokio::spawn(log_lines(slug.to_string(), err));
@@ -117,7 +139,7 @@ pub async fn start_preview(
     }
 
     tracing::info!(slug = %slug, port = port, url = %url, "preview started");
-    Ok(url)
+    Ok(StartedPreview { url, exited })
 }
 
 /// Kills the running preview process if one exists. Idempotent — returns
@@ -155,6 +177,32 @@ async fn wait_for_port_free(port: u16) -> Result<(), AstroError> {
     })
     .await
     .map_err(|_| AstroError::PortInUse(port))
+}
+
+/// Logs the dev server's stdout until it closes, which happens once every
+/// process holding it has exited. If the child is then still in the slot,
+/// nobody stopped it: clear the slot, reap it, and fire `exited`.
+async fn watch_exit(
+    state: Arc<AppState>,
+    slug: String,
+    pid: u32,
+    stdout: ChildStdout,
+    exited: oneshot::Sender<()>,
+) {
+    log_lines(slug.clone(), stdout).await;
+
+    let ours = {
+        let mut guard = state.lock_preview().await;
+        if guard.as_ref().is_some_and(|p| p.child.id() == Some(pid)) {
+            guard.take()
+        } else {
+            None
+        }
+    };
+    let Some(mut dead) = ours else { return };
+    tracing::warn!(slug = %slug, "preview exited on its own");
+    dead.child.wait().await.ok();
+    let _ = exited.send(());
 }
 
 /// Forwards each output line of the dev server to the backend log. Ends when
@@ -290,6 +338,62 @@ mod tests {
         if let Some(mut p) = running {
             Box::into_pin(p.child.kill()).await.ok();
         }
+    }
+
+    /// Spawns `sh -c script` in its own group with stdout piped, puts it in
+    /// the preview slot, and returns its stdout and PID.
+    async fn occupy_slot(state: &Arc<AppState>, script: &str) -> (ChildStdout, u32) {
+        let mut command = CommandWrap::with_new("sh", |cmd| {
+            cmd.arg("-c")
+                .arg(script)
+                .stdout(std::process::Stdio::piped());
+        });
+        command.wrap(ProcessGroup::leader());
+        let mut child = command.spawn().unwrap();
+        let stdout = child.stdout().take().unwrap();
+        let pid = child.id().unwrap();
+        *state.lock_preview().await = Some(ActivePreview {
+            slug: "test-site".to_string(),
+            url: "http://localhost:1".to_string(),
+            child,
+        });
+        (stdout, pid)
+    }
+
+    #[tokio::test]
+    async fn watch_exit_reports_a_server_that_exits_on_its_own() {
+        let tmp = TempDir::new().unwrap();
+        let state = make_state(tmp.path());
+        let (stdout, pid) = occupy_slot(&state, "echo crashing").await;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+
+        watch_exit(Arc::clone(&state), "test-site".to_string(), pid, stdout, tx).await;
+
+        assert!(rx.await.is_ok(), "an unexpected exit is reported");
+        assert!(
+            state.lock_preview().await.is_none(),
+            "the dead child is cleared"
+        );
+    }
+
+    #[tokio::test]
+    async fn watch_exit_stays_quiet_when_the_preview_was_stopped() {
+        let tmp = TempDir::new().unwrap();
+        let state = make_state(tmp.path());
+        let (stdout, pid) = occupy_slot(&state, "sleep 60").await;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+
+        let watcher = tokio::spawn(watch_exit(
+            Arc::clone(&state),
+            "test-site".to_string(),
+            pid,
+            stdout,
+            tx,
+        ));
+        stop_preview(&state).await.unwrap();
+        watcher.await.unwrap();
+
+        assert!(rx.await.is_err(), "a requested stop is not an exit");
     }
 
     #[tokio::test]

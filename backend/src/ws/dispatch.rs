@@ -311,18 +311,19 @@ async fn start_preview(
     }
 
     match astro::preview::start_preview(&state, &slug, state.preview_port).await {
-        Ok(url) => {
+        Ok(started) => {
             let running = apply_preview_event(
                 &state,
                 fsm::preview::PreviewEvent::ServerReady,
-                Some(slug),
-                Some(url),
+                Some(slug.clone()),
+                Some(started.url),
             )
             .await;
             match running {
                 Ok(view) => broadcast(&state, Event::PreviewChanged(view)),
                 Err(reply) => send_reply(&tx, correlation_id, reply).await,
             }
+            tokio::spawn(report_unexpected_exit(state, slug, started.exited));
         }
         Err(error) => {
             let failed = apply_preview_event(
@@ -345,6 +346,29 @@ async fn start_preview(
             )
             .await;
         }
+    }
+}
+
+/// Moves the preview to `Failed` if its dev server dies without a stop.
+async fn report_unexpected_exit(
+    state: Arc<AppState>,
+    slug: String,
+    exited: tokio::sync::oneshot::Receiver<()>,
+) {
+    if exited.await.is_err() {
+        return; // stopped on request
+    }
+    let failed = apply_preview_event(
+        &state,
+        fsm::preview::PreviewEvent::Failed {
+            reason: "the preview server stopped unexpectedly".to_string(),
+        },
+        Some(slug),
+        None,
+    )
+    .await;
+    if let Ok(view) = failed {
+        broadcast(&state, Event::PreviewChanged(view));
     }
 }
 

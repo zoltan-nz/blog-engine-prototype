@@ -31,7 +31,7 @@ Feature flag:
 | `fsm/preview` | Pure `PreviewState` transitions |
 | `astro/sites` | Manifest (`sites.json`), scaffold (`pnpm create astro`), delete |
 | `astro/posts` | Post CRUD: frontmatter parse/render, list/read/create/update/delete, atomic writes |
-| `astro/preview` | Spawn / stop Astro `pnpm dev`, readiness poll |
+| `astro/preview` | Spawn / stop Astro `pnpm dev`, readiness poll, report a server that exits on its own |
 | `astro/build` | Production build + log streaming |
 | `astro/watch` | Per-site debounced watcher on `src/content/blog/`; emits `PostChanged` / `PostRemoved` for external edits |
 | `astro/error` | Typed process / IO errors |
