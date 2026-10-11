@@ -36,6 +36,10 @@ mise run frontend
 mise run export-types
 ```
 
+Desktop app (Tauri v2, early): `mise run desktop` builds the SPA and opens it in a native window,
+with the backend running inside the app on `127.0.0.1:8080`. Stop any `mise run backend` first
+so both don't share `SITES_DIR` and the preview port.
+
 | Surface | URL |
 |---------|-----|
 | Backend (API + production SPA) | http://localhost:8080 |
@@ -50,6 +54,7 @@ mise run export-types
 | Task | Command |
 |------|---------|
 | Backend (`cargo watch`) | `mise run backend` |
+| Desktop app (Tauri) | `mise run desktop` |
 | Frontend | `mise run frontend` |
 | Export specta → TS | `mise run export-types` |
 | Unit tests (once) | `mise run test-unit` |
@@ -73,6 +78,7 @@ mise run export-types
 ```
 backend/            # Axum binary, FSM, Astro process control, WS
 frontend/           # SvelteKit admin UI
+src-tauri/          # Tauri v2 desktop shell; runs the backend library in-process
 integration-tests/  # Playwright against backend :8080
 .claude/specs/      # Design history (not live runbooks)
 ```

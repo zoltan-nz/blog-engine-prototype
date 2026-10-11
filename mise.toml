@@ -17,6 +17,11 @@ description = "Start frontend dev server"
 run = "pnpm dev"
 dir = "frontend"
 
+[tasks.desktop]
+description = "Run the Tauri desktop app (backend in-process on :8080, SPA from frontend/build)"
+depends = ["build-frontend"]
+run = "pnpm exec tauri dev"
+
 [tasks.types]
 description = "Update types"
 run = "cargo watch -x 'run --bin export-types'"

@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@tauri-apps/cli": "2.12.1",
     "prettier": "^3.8.3",
     "prettier-plugin-svelte": "^3.5.1",
     "prettier-plugin-tailwindcss": "^0.8.0"

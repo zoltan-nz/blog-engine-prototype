@@ -9,6 +9,7 @@ project-specific context.
 | Frontend            | SvelteKit                               |
 | UI components       | Skeleton v5 + Tailwind v4               |
 | Backend             | Rust/Axum                               |
+| Desktop shell       | Tauri v2 (`src-tauri/`)                 |
 | Integration tests   | Playwright (run on host, not in Docker) |
 | Unit tests          | Vitest (JS/TS), cargo test (Rust)       |
 | Package managers    | cargo, pnpm                             |
@@ -21,6 +22,7 @@ One backend binary and one frontend SPA.
 |------|------|
 | `backend/` | Axum API, WS protocol, FSMs, Astro process control |
 | `frontend/` | SvelteKit admin UI |
+| `src-tauri/` | Tauri v2 desktop shell: serves the backend library on `127.0.0.1:8080` in-process, webview loads `frontend/build` |
 | `integration-tests/` | Playwright (host, not Docker) |
 | `.claude/specs/` | Historical design notes |
 
@@ -30,6 +32,7 @@ One backend binary and one frontend SPA.
 |--------|---------|
 | Run backend | `mise run backend` |
 | Run frontend | `mise run frontend` |
+| Run desktop app | `mise run desktop` |
 | Export wire types | `mise run export-types` |
 | Unit tests once | `mise run test-unit` |
 | Integration tests | `mise run test` |

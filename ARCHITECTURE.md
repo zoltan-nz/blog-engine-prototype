@@ -2,7 +2,7 @@
 
 ## Overview
 
-- **One process:** Rust/Axum binary (`blog-engine-api`).
+- **One process:** Rust/Axum binary (`blog-engine-api`), or the Tauri desktop app (`blog-engine-desktop`) running the same backend library in-process.
 - **Four HTTP surfaces:** `GET /healthz`, `GET /ws` (WebSocket), `GET /site-files/{slug}/{*path}` (read-only files from a site's `src/`), static SPA.
 - **No database.** Site list lives in `{SITES_DIR}/sites.json`; site files live under `{SITES_DIR}/{slug}/`.
 - **Blog posts are markdown files.** Each site's posts live at `{SITES_DIR}/{slug}/src/content/blog/{id}.md` (Astro content collection); the backend reads/writes these directly, no separate post database.
@@ -66,6 +66,7 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 
 - Dev: backend without `embed`; SPA from disk (`FRONTEND_DIR`) or Vite separately.
 - Release: `mise run build` → frontend build, then `cargo build --release --features embed`.
+- Desktop (Tauri v2, `src-tauri/`): one process. It calls `backend::app::create_app`, serves it on `127.0.0.1:8080`, and the webview loads `frontend/build` through Tauri's asset protocol; the SPA still talks to `ws://localhost:8080/ws`. Window close, SIGINT and SIGTERM all exit through `RunEvent::Exit`, which stops the preview. Moving transport to Tauri IPC is Slice 2 step 2 of spec 0009.
 
 ## Key modules
 
