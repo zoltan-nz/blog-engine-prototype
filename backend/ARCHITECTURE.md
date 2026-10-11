@@ -25,7 +25,8 @@ Feature flag:
 | `routes` | HTTP route table: `/healthz`, `/ws`, `/site-files/{slug}/{*path}` |
 | `handlers/healthz` | Liveness probe |
 | `handlers/site_files` | Read-only `ServeDir` over a known site's `src/`; 404 for unknown slugs |
-| `ws/socket` | WebSocket upgrade (403 for a non-local `Origin`) and connection loop |
+| `ws/connection` | Transport-neutral connection: snapshot, broadcast fan-in, parse + dispatch (shared by `/ws` and Tauri IPC) |
+| `ws/socket` | WebSocket upgrade (403 for a non-local `Origin`) and axum read/write loop |
 | `ws/dispatch` | `Command` → FSM + `astro::*` → broadcast `Event` |
 | `fsm/site` | Pure `SiteState` transitions |
 | `fsm/preview` | Pure `PreviewState` transitions |

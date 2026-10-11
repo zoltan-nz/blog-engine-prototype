@@ -1,6 +1,6 @@
 use crate::state::AppState;
-use crate::types::{WsEnvelope, WsMessage};
-use crate::ws::dispatch;
+use crate::types::WsEnvelope;
+use crate::ws::connection;
 use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
@@ -8,12 +8,8 @@ use axum::response::{IntoResponse, Response};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
-
-/// Per-connection outbound buffer. Fills only if the client stops reading;
-/// senders then apply backpressure by awaiting.
-const OUTBOUND_CHANNEL_CAPACITY: usize = 32;
 
 /// Browsers attach `Origin` to every WebSocket handshake but skip CORS for it,
 /// so without this check any website could drive the local backend.
@@ -55,14 +51,8 @@ fn is_allowed_origin(origin: &str) -> bool {
 
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let (sender, receiver) = socket.split();
-    let (tx, rx) = mpsc::channel::<WsEnvelope>(OUTBOUND_CHANNEL_CAPACITY);
+    let (tx, rx) = connection::open(&state).await;
 
-    // Every connection starts from a full snapshot; reconnect = fresh snapshot,
-    // never event replay.
-    let snapshot = dispatch::snapshot_event(&state).await;
-    let _ = tx.send(dispatch::server_envelope(snapshot)).await;
-
-    tokio::spawn(forward_broadcasts(state.events_tx.subscribe(), tx.clone()));
     tokio::spawn(write(sender, rx));
     tokio::spawn(read(receiver, tx, state));
 }
@@ -74,22 +64,7 @@ async fn read(
 ) {
     while let Some(result) = receiver.next().await {
         match result {
-            Ok(Message::Text(text)) => match serde_json::from_str::<WsEnvelope>(&text) {
-                Ok(envelope) => {
-                    if let WsMessage::Command(command) = envelope.message {
-                        // Each command runs as its own task so long operations
-                        // (scaffold, build, preview poll) don't block the read
-                        // loop or each other.
-                        tokio::spawn(dispatch::dispatch_command(
-                            envelope.correlation_id,
-                            command,
-                            tx.clone(),
-                            Arc::clone(&state),
-                        ));
-                    }
-                }
-                Err(error) => warn!(%error, "discarding unparseable WS message"),
-            },
+            Ok(Message::Text(text)) => connection::handle_text(&text, &tx, &state),
             Ok(Message::Close(frame)) => {
                 debug!(?frame, "WS close received");
                 break;
@@ -99,25 +74,6 @@ async fn read(
                 debug!(%error, "WS receive error, dropping connection");
                 break;
             }
-        }
-    }
-}
-
-/// Drain the shared event broadcast into this connection's outbound channel.
-async fn forward_broadcasts(mut rx: broadcast::Receiver<WsEnvelope>, tx: mpsc::Sender<WsEnvelope>) {
-    loop {
-        match rx.recv().await {
-            Ok(envelope) => {
-                if tx.send(envelope).await.is_err() {
-                    break; // client gone
-                }
-            }
-            // Lagging just means this client missed intermediate states; the
-            // next event carries current state, so skip ahead.
-            Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                warn!(skipped, "WS client lagged behind event broadcast");
-            }
-            Err(broadcast::error::RecvError::Closed) => break,
         }
     }
 }
