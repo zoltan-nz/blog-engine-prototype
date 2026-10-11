@@ -46,7 +46,7 @@ so both don't share `SITES_DIR` and the preview port.
 | Frontend dev (Vite) | http://localhost:5173 |
 | Astro preview (when running) | http://localhost:4321 |
 | Health | `GET http://localhost:8080/healthz` |
-| Control protocol | `ws://localhost:8080/ws` |
+| Control protocol | `ws://localhost:8080/ws` (desktop app: Tauri IPC) |
 | Site files (read-only `src/`) | `GET http://localhost:8080/site-files/{slug}/{path}` |
 
 ## Common tasks

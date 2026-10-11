@@ -1,14 +1,18 @@
 // Release builds on Windows would otherwise open a console window too.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ipc;
+
 use backend::app::{create_app, shutdown, shutdown_signal};
 use backend::config::Config;
 use backend::telemetry;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::sync::Arc;
 use tracing::info;
 
-/// The SPA is built with `PUBLIC_API_BACKEND_URL=http://localhost:8080`, so the
-/// in-process backend must listen there until transport moves to Tauri IPC.
+/// The webview talks to the backend over IPC (`ipc.rs`), but post images still
+/// load from `/site-files` at `PUBLIC_API_BACKEND_URL=http://localhost:8080`,
+/// so the HTTP server stays until those move to a custom protocol.
 const BACKEND_PORT: u16 = 8080;
 
 fn main() {
@@ -35,6 +39,9 @@ fn main() {
     });
 
     tauri::Builder::default()
+        .manage(Arc::clone(&state))
+        .manage(ipc::IpcConnection::default())
+        .invoke_handler(tauri::generate_handler![ipc::connect, ipc::send])
         .setup(|app| {
             // SIGINT/SIGTERM would otherwise kill the process without
             // RunEvent::Exit and orphan the Astro preview; route them

@@ -16,6 +16,7 @@ UI components
     │  call getSocket().createSite / startPreview / createPost / …
     ▼
 BlogSocket (src/lib/state/socket.svelte.ts)
+    │  via Transport (transport.ts): WebSocket /ws, or Tauri IPC in the desktop webview
     │  send WsEnvelope{ Command }
     │  receive Snapshot | SiteChanged | SiteRemoved | PreviewChanged | BuildLog
     │          | PostChanged | PostRemoved | PostBody | Error | Pong
@@ -43,7 +44,8 @@ Rules:
 | `src/routes/+layout.svelte`        | Shell, theme/font setup                                                     |
 | `src/routes/+layout.ts`            | `ssr = false` (SPA)                                                         |
 | `src/routes/sites/[slug]/`         | Site page: post list + editor, preview switching                            |
-| `src/lib/state/socket.svelte.ts`   | WebSocket client, reducers, connection lifecycle                            |
+| `src/lib/state/socket.svelte.ts`   | Backend client, reducers, connection lifecycle                              |
+| `src/lib/state/transport.ts`       | WebSocket or Tauri IPC transport (`isTauri()` picks)                        |
 | `src/lib/state/autosave.svelte.ts` | Debounced, single-flight post saves                                         |
 | `src/lib/state/preview-switch.ts`  | Pure decision: start/stop preview on the site page                          |
 | `src/lib/state/font.svelte.ts`     | Client-only font preference                                                 |

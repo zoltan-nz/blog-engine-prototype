@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@lucide/svelte": "^1.49.0",
-    "@milkdown/crepe": "^7.22.2"
+    "@milkdown/crepe": "^7.22.2",
+    "@tauri-apps/api": "2.12.1"
   }
 }

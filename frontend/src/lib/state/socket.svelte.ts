@@ -9,6 +9,11 @@ import type {
   SiteView,
   WsEnvelope,
 } from "#lib/types/bindings.js";
+import {
+  defaultTransport,
+  type OpenTransport,
+  type Transport,
+} from "./transport.js";
 
 export const backendUrl = PUBLIC_API_BACKEND_URL;
 
@@ -161,7 +166,7 @@ export class PendingUpdates {
 }
 
 /**
- * The single WS connection to the backend. State arrives by push: a full
+ * The single connection to the backend (WebSocket, or Tauri IPC on desktop). State arrives by push: a full
  * `Snapshot` on every (re)connect, then per-entity patches. Commands return
  * their `correlation_id` so callers can match `Error` events back to requests.
  */
@@ -173,54 +178,44 @@ export class BlogSocket {
   lastError = $state<ProtocolError | null>(null);
   posts = $state<Record<string, PostMeta[]>>({});
 
-  #url: string;
-  #socket!: WebSocket;
+  #openTransport: OpenTransport;
+  #transport!: Transport;
   #retryDelay = INITIAL_DELAY_MS;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
   #intentionalClose = false;
   #pending = new PendingRequests();
   #pendingUpdates = new PendingUpdates();
 
-  constructor(url: string) {
-    this.#url = url;
+  constructor(openTransport: OpenTransport) {
+    this.#openTransport = openTransport;
     this.#connect();
     window.addEventListener("online", this.#onOnline);
   }
 
   #connect(): void {
-    this.#socket = new WebSocket(this.#url);
+    this.#transport = this.#openTransport({
+      onOpen: () => {
+        this.status = "open";
+        this.#retryDelay = INITIAL_DELAY_MS;
+      },
+      onClose: () => {
+        if (this.#intentionalClose) return;
+        this.status = "reconnecting";
+        this.#scheduleReconnect();
+      },
+      onMessage: (envelope) => this.#receive(envelope),
+    });
+  }
 
-    this.#socket.onopen = () => {
-      this.status = "open";
-      this.#retryDelay = INITIAL_DELAY_MS;
-    };
-
-    this.#socket.onclose = () => {
-      if (this.#intentionalClose) return;
-      this.status = "reconnecting";
-      this.#scheduleReconnect();
-    };
-
-    this.#socket.onmessage = (event) => {
-      try {
-        const envelope: WsEnvelope = JSON.parse(event.data);
-        if (envelope.type === "Event") {
-          if (envelope.payload.type === "PostBody") {
-            this.#pending.settleBody(
-              envelope.correlation_id,
-              envelope.payload.payload.body,
-            );
-          }
-          this.#apply(envelope.payload);
-        }
-      } catch (err) {
-        console.error("Failed to parse WS message", err);
-      }
-    };
-
-    this.#socket.onerror = (error) => {
-      console.error(error);
-    };
+  #receive(envelope: WsEnvelope): void {
+    if (envelope.type !== "Event") return;
+    if (envelope.payload.type === "PostBody") {
+      this.#pending.settleBody(
+        envelope.correlation_id,
+        envelope.payload.payload.body,
+      );
+    }
+    this.#apply(envelope.payload);
   }
 
   #scheduleReconnect(): void {
@@ -297,7 +292,7 @@ export class BlogSocket {
         break;
       case "PostBody":
         // Correlation id lives on the envelope, not the payload — settled in
-        // `onmessage` before `#apply` sees this event (see `requestPost`).
+        // `#receive` before `#apply` sees this event (see `requestPost`).
         break;
     }
   }
@@ -309,9 +304,7 @@ export class BlogSocket {
       type: "Command",
       payload: command,
     };
-    if (this.#socket.readyState === WebSocket.OPEN) {
-      this.#socket.send(JSON.stringify(envelope));
-    }
+    this.#transport.send(envelope);
     return envelope.correlation_id;
   }
 
@@ -407,7 +400,7 @@ export class BlogSocket {
       clearTimeout(this.#retryTimer);
       this.#retryTimer = null;
     }
-    this.#socket.close();
+    this.#transport.close();
   }
 }
 
@@ -415,6 +408,6 @@ let instance: BlogSocket | null = null;
 
 /** Lazy app-wide singleton; components share one connection. */
 export function getSocket(): BlogSocket {
-  instance ??= new BlogSocket(wsUrl);
+  instance ??= new BlogSocket(defaultTransport(wsUrl));
   return instance;
 }
