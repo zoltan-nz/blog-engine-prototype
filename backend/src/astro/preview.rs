@@ -17,6 +17,7 @@ use process_wrap::tokio::{CommandWrap, ProcessGroup};
 /// # Errors
 /// - `PreviewAlreadyRunning` — another site is already being previewed
 /// - `SiteNotFound` — `sites_dir/<slug>` does not exist
+/// - `PortInUse` — something still listens on `port` after a short grace period
 /// - `DevServerTimeout` — port never became reachable within the deadline
 /// - `Io` — process spawn failed
 pub async fn start_preview(
@@ -25,6 +26,19 @@ pub async fn start_preview(
     port: u16,
 ) -> Result<String, AstroError> {
     let url = format!("http://localhost:{port}");
+    let site_dir = state.sites_dir.join(slug);
+    if !site_dir.exists() {
+        return Err(AstroError::SiteNotFound(slug.to_string()));
+    }
+    // Cheap early answer; re-checked when claiming the slot below.
+    if state.lock_preview().await.is_some() {
+        return Err(AstroError::PreviewAlreadyRunning(slug.to_string()));
+    }
+
+    // The readiness probe only sees "something answers on the port", so a
+    // server still on it (the previous preview finishing its exit, or a stray
+    // one) would pass as ready and the iframe would show the wrong site.
+    wait_for_port_free(port).await?;
 
     // Claim the slot + spawn under the lock, then drop it before the poll.
     {
@@ -32,24 +46,38 @@ pub async fn start_preview(
         if guard.is_some() {
             return Err(AstroError::PreviewAlreadyRunning(slug.to_string()));
         }
-        let site_dir = state.sites_dir.join(slug);
-        if !site_dir.exists() {
-            return Err(AstroError::SiteNotFound(slug.to_string()));
-        }
         // `pnpm dev` spawns the real astro/vite dev server as a separate OS
         // process (not exec'd in place), so tracking just this PID and
         // killing it would orphan that grandchild. ProcessGroup::leader()
         // puts pnpm and everything it spawns in one group; kill() below then
         // signals the whole group.
+        //
+        // `--ignore-lock` keeps `astro dev` in the foreground: Astro 7.3 detects
+        // AI agents (e.g. a `CLAUDECODE` env var) and otherwise detaches into
+        // a daemon in its own session, which we could neither kill nor track.
         let mut command = CommandWrap::with_new("pnpm", |cmd| {
-            cmd.args(["dev", "--port", &port.to_string(), "--host", "0.0.0.0"])
+            cmd.args([
+                "dev",
+                "--port",
+                &port.to_string(),
+                "--host",
+                "0.0.0.0",
+                "--ignore-lock",
+            ])
                 .env_remove("PNPM_SCRIPT_SRC_DIR")
                 .current_dir(&site_dir)
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null());
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped());
         });
         command.wrap(ProcessGroup::leader());
-        let child = command.spawn()?;
+        let mut child = command.spawn()?;
+        // Without this the dev server's output (and why it died) is lost.
+        if let Some(out) = child.stdout().take() {
+            tokio::spawn(log_lines(slug.to_string(), out));
+        }
+        if let Some(err) = child.stderr().take() {
+            tokio::spawn(log_lines(slug.to_string(), err));
+        }
         *guard = Some(ActivePreview {
             slug: slug.to_string(),
             url: url.clone(),
@@ -111,6 +139,33 @@ pub async fn stop_preview(state: &Arc<AppState>) -> Result<(), AstroError> {
         preview.child.wait().await?;
     }
     Ok(())
+}
+
+/// How long a previous server gets to release the port before we give up.
+const PORT_RELEASE_GRACE: Duration = Duration::from_secs(5);
+
+async fn wait_for_port_free(port: u16) -> Result<(), AstroError> {
+    tokio::time::timeout(PORT_RELEASE_GRACE, async {
+        while tokio::net::TcpStream::connect(("127.0.0.1", port))
+            .await
+            .is_ok()
+        {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .map_err(|_| AstroError::PortInUse(port))
+}
+
+/// Forwards each output line of the dev server to the backend log. Ends when
+/// the pipe closes, i.e. when the process exits.
+async fn log_lines(slug: String, pipe: impl tokio::io::AsyncRead + Unpin) {
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    let mut lines = BufReader::new(pipe).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        tracing::debug!(slug = %slug, "preview: {line}");
+    }
+    tracing::info!(slug = %slug, "preview output closed");
 }
 
 /// POSIX errnos `killpg` returns for a group with nothing left to signal.
@@ -235,6 +290,22 @@ mod tests {
         if let Some(mut p) = running {
             Box::into_pin(p.child.kill()).await.ok();
         }
+    }
+
+    #[tokio::test]
+    async fn start_preview_refuses_a_port_another_server_holds() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::create_dir(tmp.path().join("my-site")).unwrap();
+        let state = make_state(tmp.path());
+
+        // A stale server on the port would pass the readiness probe and the
+        // iframe would show the wrong site.
+        let squatter = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = squatter.local_addr().unwrap().port();
+
+        let err = start_preview(&state, "my-site", port).await.unwrap_err();
+        assert!(matches!(err, AstroError::PortInUse(p) if p == port));
+        assert!(state.lock_preview().await.is_none());
     }
 
     #[tokio::test]

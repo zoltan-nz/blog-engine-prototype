@@ -13,6 +13,9 @@ pub enum AstroError {
     #[error("Preview already running for site '{0}'")]
     PreviewAlreadyRunning(String),
 
+    #[error("Port {0} is held by another server")]
+    PortInUse(u16),
+
     #[error("Dev server timed out: {0}")]
     DevServerTimeout(String),
 

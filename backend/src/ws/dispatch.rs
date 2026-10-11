@@ -814,6 +814,7 @@ const fn astro_error_code(error: &AstroError) -> ErrorCode {
         AstroError::SiteAlreadyExists(_) => ErrorCode::SiteAlreadyExists,
         AstroError::PreviewAlreadyRunning(_) => ErrorCode::InvalidTransition,
         AstroError::DevServerTimeout(_) => ErrorCode::PreviewTimeout,
+        AstroError::PortInUse(_) => ErrorCode::PortInUse,
         AstroError::CommandFailed(_) => ErrorCode::BuildFailed,
         AstroError::Io(_)
         | AstroError::Json(_)

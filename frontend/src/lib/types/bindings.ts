@@ -3,147 +3,52 @@
 /**
  * Lifecycle of a managed Astro site. Transitions live in `fsm::site`.
  */
-export type SiteState =
-  | { type: "Creating" }
-  | { type: "Ready" }
-  | { type: "Building" }
-  | { type: "BuildFailed"; payload: { reason: string } }
-  | { type: "Deleting" };
+export type SiteState = { type: "Creating" } | { type: "Ready" } | { type: "Building" } | { type: "BuildFailed"; payload: { reason: string } } | { type: "Deleting" }
+
+export type WsMessage = { type: "Command"; payload: Command } | { type: "Event"; payload: Event }
 
 /**
- * A blog post's listing metadata — everything needed to render a post list
- * row without reading the (larger) markdown body from disk.
+ * The preview as the frontend sees it. `slug` says which site is previewed;
+ * `url` is set only while `Running`.
  */
-export type PostMeta = {
-  id: string;
-  title: string;
-  description: string;
-  pub_date: string;
-  updated_date: string | null;
-};
+export type PreviewView = { state: PreviewState; slug: string | null; url: string | null }
+
+/**
+ * Client → server messages.
+ */
+export type Command = { type: "CreateSite"; payload: { name: string; slug: string } } | { type: "BuildSite"; payload: { slug: string } } | { type: "StartPreview"; payload: { slug: string } } | { type: "StopPreview" } | { type: "DeleteSite"; payload: { slug: string } } | { type: "Ping" } | { type: "CreatePost"; payload: { site_slug: string; id: string; title: string; description: string; body: string } } | { type: "UpdatePost"; payload: { site_slug: string; id: string; title: string; description: string; body: string } } | { type: "DeletePost"; payload: { site_slug: string; id: string } } | { type: "GetPost"; payload: { site_slug: string; id: string } } | { type: "DraftPost"; payload: { site_slug: string; id: string; topic: string } }
+
+export type ErrorCode = "SiteNotFound" | "SiteAlreadyExists" | "InvalidTransition" | "BuildFailed" | "PreviewTimeout" | "PortInUse" | "Internal" | "PostNotFound" | "PostAlreadyExists" | "InvalidInput"
 
 /**
  * Lean envelope: timestamp + correlation id + flattened message. Commands
  * carry a client-generated `correlation_id`; error events echo it back so the
  * client can match failures to requests.
  */
-export type WsEnvelope = (
-  | { type: "Command"; payload: Command }
-  | { type: "Event"; payload: Event }
-) & { unix_timestamp_us: number; correlation_id: string };
+export type WsEnvelope = ({ type: "Command"; payload: Command } | { type: "Event"; payload: Event }) & { unix_timestamp_us: number; correlation_id: string }
 
-export type ErrorCode =
-  | "SiteNotFound"
-  | "SiteAlreadyExists"
-  | "InvalidTransition"
-  | "BuildFailed"
-  | "PreviewTimeout"
-  | "Internal"
-  | "PostNotFound"
-  | "PostAlreadyExists"
-  | "InvalidInput";
+/**
+ * A site as the frontend sees it: identity plus current FSM state.
+ */
+export type SiteView = { slug: string; name: string; state: SiteState }
 
 /**
  * Lifecycle of the (single) Astro dev-server preview. Transitions live in
  * `fsm::preview`. `Starting` covers the TCP readiness poll window.
  */
-export type PreviewState =
-  | { type: "Stopped" }
-  | { type: "Starting" }
-  | { type: "Running" }
-  | { type: "Stopping" }
-  | { type: "Failed"; payload: { reason: string } };
+export type PreviewState = { type: "Stopped" } | { type: "Starting" } | { type: "Running" } | { type: "Stopping" } | { type: "Failed"; payload: { reason: string } }
 
 /**
- * A site as the frontend sees it: identity plus current FSM state.
+ * A blog post's listing metadata — everything needed to render a post list
+ * row without reading the (larger) markdown body from disk.
  */
-export type SiteView = { slug: string; name: string; state: SiteState };
+export type PostMeta = { id: string; title: string; description: string; pub_date: string; updated_date: string | null }
 
-/**
- * The preview as the frontend sees it. `slug` says which site is previewed;
- * `url` is set only while `Running`.
- */
-export type PreviewView = {
-  state: PreviewState;
-  slug: string | null;
-  url: string | null;
-};
-
-/**
- * Client → server messages.
- */
-export type Command =
-  | { type: "CreateSite"; payload: { name: string; slug: string } }
-  | { type: "BuildSite"; payload: { slug: string } }
-  | { type: "StartPreview"; payload: { slug: string } }
-  | { type: "StopPreview" }
-  | { type: "DeleteSite"; payload: { slug: string } }
-  | { type: "Ping" }
-  | {
-      type: "CreatePost";
-      payload: {
-        site_slug: string;
-        id: string;
-        title: string;
-        description: string;
-        body: string;
-      };
-    }
-  | {
-      type: "UpdatePost";
-      payload: {
-        site_slug: string;
-        id: string;
-        title: string;
-        description: string;
-        body: string;
-      };
-    }
-  | { type: "DeletePost"; payload: { site_slug: string; id: string } }
-  | { type: "GetPost"; payload: { site_slug: string; id: string } }
-  | {
-      type: "DraftPost";
-      payload: { site_slug: string; id: string; topic: string };
-    };
-
-export type LogStream = "Stdout" | "Stderr";
-
-export type WsMessage =
-  | { type: "Command"; payload: Command }
-  | { type: "Event"; payload: Event };
+export type LogStream = "Stdout" | "Stderr"
 
 /**
  * Server → client messages. `Snapshot` is sent on every connect — reconnect
  * strategy is a fresh snapshot, never event replay.
  */
-export type Event =
-  | {
-      type: "Snapshot";
-      payload: {
-        sites: SiteView[];
-        preview: PreviewView;
-        posts: { [key: string]: PostMeta[] };
-      };
-    }
-  | { type: "SiteChanged"; payload: SiteView }
-  | { type: "SiteRemoved"; payload: { slug: string } }
-  | { type: "PreviewChanged"; payload: PreviewView }
-  | {
-      type: "BuildLog";
-      payload: { slug: string; stream: LogStream; data: string };
-    }
-  | {
-      type: "Error";
-      payload: {
-        code: ErrorCode;
-        message: string;
-        correlation_id: string | null;
-      };
-    }
-  | { type: "Pong" }
-  | { type: "PostChanged"; payload: { site_slug: string; post: PostMeta } }
-  | { type: "PostRemoved"; payload: { site_slug: string; id: string } }
-  | {
-      type: "PostBody";
-      payload: { site_slug: string; id: string; body: string };
-    };
+export type Event = { type: "Snapshot"; payload: { sites: SiteView[]; preview: PreviewView; posts: { [key: string]: PostMeta[] } } } | { type: "SiteChanged"; payload: SiteView } | { type: "SiteRemoved"; payload: { slug: string } } | { type: "PreviewChanged"; payload: PreviewView } | { type: "BuildLog"; payload: { slug: string; stream: LogStream; data: string } } | { type: "Error"; payload: { code: ErrorCode; message: string; correlation_id: string | null } } | { type: "Pong" } | { type: "PostChanged"; payload: { site_slug: string; post: PostMeta } } | { type: "PostRemoved"; payload: { site_slug: string; id: string } } | { type: "PostBody"; payload: { site_slug: string; id: string; body: string } }
+

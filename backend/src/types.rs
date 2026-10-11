@@ -43,6 +43,7 @@ pub enum ErrorCode {
     InvalidTransition,
     BuildFailed,
     PreviewTimeout,
+    PortInUse,
     Internal,
     PostNotFound,
     PostAlreadyExists,
