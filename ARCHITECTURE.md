@@ -6,6 +6,7 @@
 - **Four HTTP surfaces:** `GET /healthz`, `GET /ws` (WebSocket), `GET /site-files/{slug}/{*path}` (read-only files from a site's `src/`), static SPA.
 - **No database.** Site list lives in `{SITES_DIR}/sites.json`; site files live under `{SITES_DIR}/{slug}/`.
 - **Blog posts are markdown files.** Each site's posts live at `{SITES_DIR}/{slug}/src/content/blog/{id}.md` (Astro content collection); the backend reads/writes these directly, no separate post database.
+- **`/ws` only accepts local origins.** A browser `Origin` other than `localhost` / `127.0.0.1` / `[::1]` or the Tauri webview gets 403, so other websites cannot drive the backend (it runs Claude). Clients without an `Origin` (CLI, tests) are allowed.
 - **No OpenAPI / REST resource API.** Application ops go over the typed WebSocket protocol.
 - **Git is not wired yet.** Scaffold runs with `--no-git`; `git_url` on the manifest is currently empty. Treat “Git source of truth” as a future goal, not current behaviour.
 

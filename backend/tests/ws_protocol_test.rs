@@ -177,3 +177,33 @@ async fn delete_site_broadcasts_deleting_then_removed() {
     assert_eq!(removed["payload"]["type"], "SiteRemoved");
     assert_eq!(removed["payload"]["payload"]["slug"], "doomed");
 }
+
+#[tokio::test]
+async fn upgrade_from_a_foreign_origin_is_forbidden() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let server = ws_server(tmp.path());
+
+    let response = server
+        .get_websocket("/ws")
+        .add_header("origin", "https://evil.example")
+        .expect_failure()
+        .await;
+
+    response.assert_status_forbidden();
+}
+
+#[tokio::test]
+async fn upgrade_from_the_dev_frontend_origin_is_allowed() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let server = ws_server(tmp.path());
+
+    let mut ws = server
+        .get_websocket("/ws")
+        .add_header("origin", "http://localhost:5173")
+        .await
+        .into_websocket()
+        .await;
+    let snapshot: Value = ws.receive_json().await;
+
+    assert_eq!(snapshot["payload"]["type"], "Snapshot");
+}
