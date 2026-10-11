@@ -5,6 +5,12 @@ use std::path::Path;
 
 pub const MANIFEST_FILE_NAME: &str = "sites.json";
 
+/// Scaffolder and template are pinned together: `create-astro` downloads the
+/// template from the `withastro/astro` repo at `TEMPLATE_REF`, and the default
+/// ref (`latest`) moves. Bump both deliberately.
+const CREATE_ASTRO_SPEC: &str = "astro@5.2.4";
+const TEMPLATE_REF: &str = "astro@7.3.5";
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct SiteData {
     pub folder: String,
@@ -76,7 +82,7 @@ fn clear_sample_posts(site_dir: &Path) -> std::io::Result<()> {
 /// Scaffolds an Astro blog project in `site_dir` and installs dependencies.
 ///
 /// Runs sequentially:
-///   1. `pnpm create astro@latest . --template blog --no-git --yes --skip-houston --no-install`
+///   1. `pnpm create astro@5.2.4 . --template blog --ref astro@7.3.5 --no-git --yes --skip-houston --no-install`
 ///   2. `pnpm install`
 ///
 /// Only `pnpm` (plus Node.js) must be on `PATH`; pnpm fetches the scaffolder
@@ -91,10 +97,12 @@ pub async fn scaffold_site(site_dir: &Path) -> Result<(), AstroError> {
         "pnpm",
         &[
             "create",
-            "astro@latest",
+            CREATE_ASTRO_SPEC,
             ".",
             "--template",
             "blog",
+            "--ref",
+            TEMPLATE_REF,
             "--no-git",
             "--yes",
             "--skip-houston",
