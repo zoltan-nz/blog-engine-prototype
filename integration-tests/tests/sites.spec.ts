@@ -55,6 +55,8 @@ test.describe.serial('Sites - full lifecycle over WS', () => {
     const card = page.locator('li', { hasText: BLOG_NAME });
     await card.getByRole('link', { name: /Edit posts/ }).click();
 
+    // The scaffolder is pinned, so the installed Astro version is shown, not guessed.
+    await expect(page.getByText(/Astro \d+\.\d+\.\d+/)).toBeVisible();
     await expect(page.locator('iframe[src]')).toBeVisible({ timeout: 90_000 });
 
     await page.goto(FRONTEND_URL);

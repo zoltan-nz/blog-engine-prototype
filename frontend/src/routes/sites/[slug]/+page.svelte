@@ -53,7 +53,10 @@
     </a>
     <div>
       <h1 class="text-xl font-bold">{site?.name ?? siteSlug}</h1>
-      <p class="font-mono text-sm text-surface-600-400">{siteSlug}</p>
+      <p class="font-mono text-sm text-surface-600-400">
+        {siteSlug}{#if site?.astro_version}
+          · Astro {site.astro_version}{/if}
+      </p>
     </div>
   </header>
 

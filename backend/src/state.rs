@@ -31,6 +31,7 @@ pub struct SiteEntry {
     /// posts from disk on every `Snapshot` would mean a filesystem scan per
     /// reconnect.
     pub posts: Vec<PostMeta>,
+    pub astro_version: Option<String>,
 }
 
 pub struct AppState {
@@ -55,17 +56,18 @@ impl AppState {
     pub fn new(
         sites_dir: impl Into<PathBuf>,
         preview_port: u16,
-        initial_sites: impl IntoIterator<Item = (String, String, Vec<PostMeta>)>,
+        initial_sites: impl IntoIterator<Item = (String, String, Vec<PostMeta>, Option<String>)>,
     ) -> Self {
         let sites = initial_sites
             .into_iter()
-            .map(|(slug, name, posts)| {
+            .map(|(slug, name, posts, astro_version)| {
                 (
                     slug,
                     SiteEntry {
                         name,
                         state: SiteState::Ready,
                         posts,
+                        astro_version,
                     },
                 )
             })

@@ -24,7 +24,7 @@ pub fn create_app(config: Config) -> (Router, Arc<AppState>) {
     // Collect slugs before initial_sites is consumed by AppState::new.
     let site_slugs: Vec<String> = initial_sites
         .iter()
-        .map(|(slug, _, _)| slug.clone())
+        .map(|(slug, _, _, _)| slug.clone())
         .collect();
 
     let state = Arc::new(AppState::new(
@@ -101,7 +101,9 @@ pub async fn shutdown(state: &Arc<AppState>) {
 /// startup. Best-effort: a broken manifest, or a site whose posts fail to
 /// list, logs a warning and contributes an empty list rather than refusing
 /// to boot.
-fn hydrate_sites(sites_dir: &std::path::Path) -> Vec<(String, String, Vec<types::PostMeta>)> {
+fn hydrate_sites(
+    sites_dir: &std::path::Path,
+) -> Vec<(String, String, Vec<types::PostMeta>, Option<String>)> {
     if let Err(error) = std::fs::create_dir_all(sites_dir) {
         warn!(%error, dir = %sites_dir.display(), "could not create sites dir");
         return Vec::new();
@@ -110,12 +112,13 @@ fn hydrate_sites(sites_dir: &std::path::Path) -> Vec<(String, String, Vec<types:
         Ok(sites) => sites
             .into_iter()
             .map(|s| {
-                let posts =
-                    astro::posts::list_posts(&sites_dir.join(&s.folder)).unwrap_or_else(|error| {
-                        warn!(%error, slug = %s.folder, "could not list posts for site");
-                        Vec::new()
-                    });
-                (s.folder, s.name, posts)
+                let dir = sites_dir.join(&s.folder);
+                let posts = astro::posts::list_posts(&dir).unwrap_or_else(|error| {
+                    warn!(%error, slug = %s.folder, "could not list posts for site");
+                    Vec::new()
+                });
+                let astro_version = astro::sites::astro_version(&dir);
+                (s.folder, s.name, posts, astro_version)
             })
             .collect(),
         Err(error) => {

@@ -106,6 +106,8 @@ pub struct SiteView {
     pub slug: String,
     pub name: String,
     pub state: SiteState,
+    /// Installed Astro version; `None` until the scaffold's install finishes.
+    pub astro_version: Option<String>,
 }
 
 /// The preview as the frontend sees it. `slug` says which site is previewed;

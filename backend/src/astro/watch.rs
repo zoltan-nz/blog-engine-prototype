@@ -133,7 +133,7 @@ mod tests {
         Arc::new(AppState::new(
             site.path(),
             4321,
-            vec![("my-blog".to_string(), "My Blog".to_string(), posts)],
+            vec![("my-blog".to_string(), "My Blog".to_string(), posts, None)],
         ))
     }
 

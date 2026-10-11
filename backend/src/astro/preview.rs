@@ -295,7 +295,7 @@ mod tests {
         Arc::new(AppState::new(
             sites_dir,
             4321,
-            Vec::<(String, String, Vec<crate::types::PostMeta>)>::new(),
+            Vec::<(String, String, Vec<crate::types::PostMeta>, Option<String>)>::new(),
         ))
     }
 

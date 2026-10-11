@@ -176,11 +176,50 @@ pub fn delete_site(sites_dir: &Path, slug: &str) -> Result<(), AstroError> {
     Ok(())
 }
 
+/// The Astro version installed in a site.
+///
+/// Read from `node_modules/astro/package.json`. `None` when Astro is not
+/// installed yet or its manifest can't be read; the version is
+/// informational, so a missing value is not an error.
+#[must_use]
+pub fn astro_version(site_dir: &Path) -> Option<String> {
+    #[derive(Deserialize)]
+    struct PackageManifest {
+        version: String,
+    }
+
+    let content = fs::read_to_string(site_dir.join("node_modules/astro/package.json")).ok()?;
+    serde_json::from_str::<PackageManifest>(&content)
+        .ok()
+        .map(|manifest| manifest.version)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
+
+    #[test]
+    fn astro_version_reads_the_installed_package() {
+        let site = TempDir::new().unwrap();
+        let astro_dir = site.path().join("node_modules/astro");
+        fs::create_dir_all(&astro_dir).unwrap();
+        fs::write(
+            astro_dir.join("package.json"),
+            r#"{"name":"astro","version":"7.3.8"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(astro_version(site.path()).as_deref(), Some("7.3.8"));
+    }
+
+    #[test]
+    fn astro_version_is_none_before_install() {
+        let site = TempDir::new().unwrap();
+
+        assert_eq!(astro_version(site.path()), None);
+    }
 
     #[test]
     fn clear_sample_posts_empties_content_dir() {

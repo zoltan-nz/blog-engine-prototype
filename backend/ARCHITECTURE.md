@@ -29,7 +29,7 @@ Feature flag:
 | `ws/dispatch` | `Command` → FSM + `astro::*` → broadcast `Event` |
 | `fsm/site` | Pure `SiteState` transitions |
 | `fsm/preview` | Pure `PreviewState` transitions |
-| `astro/sites` | Manifest (`sites.json`), scaffold (`pnpm create astro`), delete |
+| `astro/sites` | Manifest (`sites.json`), scaffold (pinned `pnpm create astro`), delete, installed Astro version |
 | `astro/posts` | Post CRUD: frontmatter parse/render, list/read/create/update/delete, atomic writes |
 | `astro/preview` | Spawn / stop Astro `pnpm dev`, readiness poll, report a server that exits on its own |
 | `astro/build` | Production build + log streaming |

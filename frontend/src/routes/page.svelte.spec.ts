@@ -29,7 +29,12 @@ describe("/+page.svelte", () => {
 
   it("should render a site card from socket state", async () => {
     fakeSocket.sites = [
-      { slug: "my-blog", name: "My Blog", state: { type: "Ready" } },
+      {
+        slug: "my-blog",
+        name: "My Blog",
+        state: { type: "Ready" },
+        astro_version: null,
+      },
     ];
     await render(Page);
 

@@ -33,11 +33,7 @@ pub async fn snapshot_event(state: &Arc<AppState>) -> Event {
 
     let mut sites: Vec<SiteView> = sites_guard
         .iter()
-        .map(|(slug, entry)| SiteView {
-            slug: slug.clone(),
-            name: entry.name.clone(),
-            state: entry.state.clone(),
-        })
+        .map(|(slug, entry)| site_view(slug, entry))
         .collect();
     sites.sort_by(|a, b| a.slug.cmp(&b.slug));
 
@@ -155,10 +151,11 @@ async fn create_site(
                 name: name.clone(),
                 state: SiteState::Creating,
                 posts: Vec::new(),
+                astro_version: None,
             },
         );
     }
-    broadcast_site(&state, &slug, &name, SiteState::Creating);
+    broadcast_site(&state, &slug).await;
 
     let result = match astro::sites::create_site(&state.sites_dir, &name, &slug) {
         Ok(_) => astro::sites::scaffold_site(&state.sites_dir.join(&slug)).await,
@@ -167,13 +164,16 @@ async fn create_site(
 
     match result {
         Ok(()) => {
+            let site_dir = state.sites_dir.join(&slug);
+            if let Some(entry) = state.sites.write().await.get_mut(&slug) {
+                entry.astro_version = astro::sites::astro_version(&site_dir);
+            }
             match apply_site_event(&state, &slug, fsm::site::SiteEvent::ScaffoldSucceeded).await {
-                Ok(new_state) => {
-                    broadcast_site(&state, &slug, &name, new_state);
+                Ok(_) => {
+                    broadcast_site(&state, &slug).await;
 
                     // Populate the post cache from the scaffold's template posts,
                     // then notify connected clients so they see content immediately.
-                    let site_dir = state.sites_dir.join(&slug);
                     let posts = astro::posts::list_posts(&site_dir).unwrap_or_default();
                     if let Some(entry) = state.sites.write().await.get_mut(&slug) {
                         entry.posts = posts;
@@ -227,15 +227,12 @@ async fn build_site(
     tx: mpsc::Sender<WsEnvelope>,
     state: Arc<AppState>,
 ) {
-    let (name, new_state) =
-        match apply_site_event_named(&state, &slug, fsm::site::SiteEvent::BuildRequested).await {
-            Ok(ok) => ok,
-            Err(reply) => {
-                send_reply(&tx, correlation_id, reply).await;
-                return;
-            }
-        };
-    broadcast_site(&state, &slug, &name, new_state);
+    if let Err(reply) = apply_site_event(&state, &slug, fsm::site::SiteEvent::BuildRequested).await
+    {
+        send_reply(&tx, correlation_id, reply).await;
+        return;
+    }
+    broadcast_site(&state, &slug).await;
 
     // Forward build output lines to all clients as they arrive.
     let (log_tx, mut log_rx) = mpsc::unbounded_channel();
@@ -264,7 +261,7 @@ async fn build_site(
         },
     };
     match apply_site_event(&state, &slug, outcome_event).await {
-        Ok(final_state) => broadcast_site(&state, &slug, &name, final_state),
+        Ok(_) => broadcast_site(&state, &slug).await,
         Err(reply) => send_reply(&tx, correlation_id.clone(), reply).await,
     }
     if let Err(error) = result {
@@ -435,8 +432,8 @@ async fn delete_site(
         .read()
         .await
         .get(&slug)
-        .map(|entry| (entry.name.clone(), entry.state.clone()));
-    let Some((name, previous)) = entry else {
+        .map(|entry| entry.state.clone());
+    let Some(previous) = entry else {
         send_error(
             &tx,
             correlation_id,
@@ -448,7 +445,7 @@ async fn delete_site(
     };
 
     match apply_site_event(&state, &slug, fsm::site::SiteEvent::DeleteRequested).await {
-        Ok(new_state) => broadcast_site(&state, &slug, &name, new_state),
+        Ok(_) => broadcast_site(&state, &slug).await,
         Err(reply) => {
             send_reply(&tx, correlation_id, reply).await;
             return;
@@ -466,9 +463,9 @@ async fn delete_site(
             // Deletion failed: restore the pre-delete state so the site is
             // not stuck in Deleting.
             if let Some(entry) = state.sites.write().await.get_mut(&slug) {
-                entry.state = previous.clone();
+                entry.state = previous;
             }
-            broadcast_site(&state, &slug, &name, previous);
+            broadcast_site(&state, &slug).await;
             send_error(
                 &tx,
                 correlation_id,
@@ -739,22 +736,12 @@ struct ErrorReply {
     message: String,
 }
 
+/// Transition a site under the write lock; returns the new state.
 async fn apply_site_event(
     state: &Arc<AppState>,
     slug: &str,
     event: fsm::site::SiteEvent,
 ) -> Result<SiteState, ErrorReply> {
-    apply_site_event_named(state, slug, event)
-        .await
-        .map(|(_, new_state)| new_state)
-}
-
-/// Transition a site under the write lock; returns `(name, new_state)`.
-async fn apply_site_event_named(
-    state: &Arc<AppState>,
-    slug: &str,
-    event: fsm::site::SiteEvent,
-) -> Result<(String, SiteState), ErrorReply> {
     let mut sites = state.sites.write().await;
     let entry = sites.get_mut(slug).ok_or_else(|| ErrorReply {
         code: ErrorCode::SiteNotFound,
@@ -765,7 +752,7 @@ async fn apply_site_event_named(
         message: e.to_string(),
     })?;
     entry.state = new_state.clone();
-    Ok((entry.name.clone(), new_state))
+    Ok(new_state)
 }
 
 /// Transition the preview under the write lock, updating slug/url alongside
@@ -798,15 +785,27 @@ fn broadcast(state: &Arc<AppState>, event: Event) {
     let _ = state.events_tx.send(server_envelope(event));
 }
 
-fn broadcast_site(state: &Arc<AppState>, slug: &str, name: &str, site_state: SiteState) {
-    broadcast(
-        state,
-        Event::SiteChanged(SiteView {
-            slug: slug.to_string(),
-            name: name.to_string(),
-            state: site_state,
-        }),
-    );
+/// Broadcasts the site's current entry; a site already removed from the map
+/// has nothing to report.
+async fn broadcast_site(state: &Arc<AppState>, slug: &str) {
+    let view = state
+        .sites
+        .read()
+        .await
+        .get(slug)
+        .map(|entry| site_view(slug, entry));
+    if let Some(view) = view {
+        broadcast(state, Event::SiteChanged(view));
+    }
+}
+
+fn site_view(slug: &str, entry: &SiteEntry) -> SiteView {
+    SiteView {
+        slug: slug.to_string(),
+        name: entry.name.clone(),
+        state: entry.state.clone(),
+        astro_version: entry.astro_version.clone(),
+    }
 }
 
 async fn send_to_client(tx: &mpsc::Sender<WsEnvelope>, correlation_id: String, event: Event) {
@@ -871,7 +870,7 @@ mod tests {
         Arc::new(AppState::new(
             sites_dir,
             4321,
-            vec![(slug.to_string(), "My Blog".to_string(), Vec::new())],
+            vec![(slug.to_string(), "My Blog".to_string(), Vec::new(), None)],
         ))
     }
 
@@ -1091,7 +1090,7 @@ mod tests {
         let state = Arc::new(AppState::new(
             sites.path(),
             4321,
-            vec![("my-blog".to_string(), "My Blog".to_string(), posts)],
+            vec![("my-blog".to_string(), "My Blog".to_string(), posts, None)],
         ));
 
         let event = snapshot_event(&state).await;
@@ -1101,6 +1100,30 @@ mod tests {
                 let my_blog_posts = &posts["my-blog"];
                 assert_eq!(my_blog_posts[0].id, "newer");
                 assert_eq!(my_blog_posts[1].id, "older");
+            }
+            other => panic!("expected Snapshot, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn snapshot_includes_each_sites_astro_version() {
+        let sites = TempDir::new().unwrap();
+        let state = Arc::new(AppState::new(
+            sites.path(),
+            4321,
+            vec![(
+                "my-blog".to_string(),
+                "My Blog".to_string(),
+                Vec::new(),
+                Some("7.3.8".to_string()),
+            )],
+        ));
+
+        let event = snapshot_event(&state).await;
+
+        match event {
+            Event::Snapshot { sites, .. } => {
+                assert_eq!(sites[0].astro_version.as_deref(), Some("7.3.8"));
             }
             other => panic!("expected Snapshot, got {other:?}"),
         }

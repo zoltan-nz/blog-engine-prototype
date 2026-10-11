@@ -18,6 +18,7 @@ const ready = (slug: string): SiteView => ({
   slug,
   name: slug.toUpperCase(),
   state: { type: "Ready" },
+  astro_version: null,
 });
 
 const post = (id: string, pubDate: string): PostMeta => ({
@@ -39,6 +40,7 @@ describe("upsertSite", () => {
       slug: "a-blog",
       name: "A BLOG",
       state: { type: "Building" },
+      astro_version: null,
     };
     const result = upsertSite([ready("a-blog"), ready("b-blog")], updated);
     expect(result).toHaveLength(2);
