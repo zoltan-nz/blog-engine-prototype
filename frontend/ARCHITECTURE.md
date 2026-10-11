@@ -30,7 +30,7 @@ Reactive UI (site list, post list + editor, footer connection badge)
 Rules:
 
 - Server state is **push-only**. Do not introduce HTTP resource clients; the only HTTP read is `/site-files/…`
-  for post-editor images.
+  for post-editor images (`site-files://` custom protocol on desktop).
 - On (re)connect the server sends a full `Snapshot`; the client replaces local lists — no event replay.
 - Commands return a `correlation_id`; match `Event::Error` for that id when showing failures.
 - Request/reply: `requestPost()` (`GetPost` → `PostBody`), `updatePost()` (`UpdatePost` → `PostChanged`), and

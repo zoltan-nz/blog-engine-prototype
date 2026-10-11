@@ -4,11 +4,13 @@
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/classic.css";
   import { backendUrl, getSocket } from "#lib/state/socket.svelte.js";
-  import { resolveSiteFileUrl } from "./site-file-url.js";
+  import { resolveSiteFileUrl, siteFilesBaseUrl } from "./site-file-url.js";
   import { createAutosave } from "#lib/state/autosave.svelte.js";
   import type { PostMeta } from "#lib/types/bindings.js";
 
   let { siteSlug, post }: { siteSlug: string; post: PostMeta } = $props();
+
+  const siteFilesUrl = siteFilesBaseUrl(backendUrl);
 
   const socket = getSocket();
 
@@ -52,7 +54,7 @@
         featureConfigs: {
           [CrepeFeature.ImageBlock]: {
             proxyDomURL: (url: string) =>
-              resolveSiteFileUrl(backendUrl, siteSlug, post.id, url),
+              resolveSiteFileUrl(siteFilesUrl, siteSlug, post.id, url),
           },
         },
       });

@@ -10,7 +10,8 @@ Generic Svelte/pnpm rules live in `~/.claude/rules/frontend.md`.
   commands (`createSite()`, `startPreview()`, `createPost()`, …) return a `correlation_id`; state arrives as
   broadcasts into `socket.sites` / `socket.preview` / `socket.posts`. `updatePost()`, `draftPost()` and `requestPost()`
   return promises settled by the matching event. Never fetch server state over HTTP; the only other HTTP route is
-  read-only `/site-files/…` for post-editor images.
+  read-only `/site-files/…` for post-editor images (`site-files://` in the desktop webview; see
+  `siteFilesBaseUrl` in `post-editor/site-file-url.ts`).
 - **Wire types are generated:** import from `#lib/types/bindings.js`; regenerate with `mise run export-types`.
 - **Backend URL:** `PUBLIC_API_BACKEND_URL` (declared in `src/env.ts`, inlined at build time); defaults to `http://localhost:8080`.
 

@@ -67,7 +67,7 @@ Loaded with `dotenvy` + `envy` in `backend/src/config.rs`.
 
 - Dev: backend without `embed`; SPA from disk (`FRONTEND_DIR`) or Vite separately.
 - Release: `mise run build` → frontend build, then `cargo build --release --features embed`.
-- Desktop (Tauri v2, `src-tauri/`): one process. It calls `backend::app::create_app`, serves it on `127.0.0.1:8080`, and the webview loads `frontend/build` through Tauri's asset protocol; the SPA speaks the client protocol over Tauri IPC (`connect` / `send` commands in `src-tauri/src/ipc.rs`, same `WsEnvelope` JSON as `/ws`), so no socket is involved. The HTTP server stays only for `/site-files` editor images. Window close, SIGINT and SIGTERM all exit through `RunEvent::Exit`, which stops the preview.
+- Desktop (Tauri v2, `src-tauri/`): one process. It calls `backend::app::create_app`, serves it on `127.0.0.1:8080`, and the webview loads `frontend/build` through Tauri's asset protocol; the SPA speaks the client protocol over Tauri IPC (`connect` / `send` commands in `src-tauri/src/ipc.rs`, same `WsEnvelope` JSON as `/ws`), so no socket is involved. Editor images load from a `site-files://` custom protocol (`src-tauri/src/site_files.rs`) that forwards to the same `/site-files` route in-process, so the webview needs no HTTP; the `127.0.0.1:8080` server is still started until a follow-up removes it. Window close, SIGINT and SIGTERM all exit through `RunEvent::Exit`, which stops the preview.
 
 ## Key modules
 
