@@ -61,6 +61,41 @@ pub fn create_app(config: Config) -> (Router, Arc<AppState>) {
     (app, state)
 }
 
+/// Resolves on Ctrl-C or SIGTERM.
+///
+/// # Panics
+/// If the signal handlers cannot be installed (startup-time invariant).
+pub async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("install Ctrl-C handler");
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("install SIGTERM handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
+}
+
+/// The preview runs in its own process group, so it outlives this process
+/// unless we stop it on the way out.
+pub async fn shutdown(state: &Arc<AppState>) {
+    info!("shutting down");
+    if let Err(err) = astro::preview::stop_preview(state).await {
+        warn!(error = %err, "stopping preview on shutdown failed");
+    }
+}
+
 /// Load `(slug, name, posts)` triples from the manifest so pre-existing
 /// sites enter the FSM map as `Ready` (with their post cache warm) at
 /// startup. Best-effort: a broken manifest, or a site whose posts fail to

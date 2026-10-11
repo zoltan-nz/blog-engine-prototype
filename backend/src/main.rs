@@ -1,4 +1,4 @@
-use backend::app::create_app;
+use backend::app::{create_app, shutdown, shutdown_signal};
 use backend::config;
 use backend::telemetry;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -10,7 +10,7 @@ async fn main() {
 
     let config = config::Config::from_env().expect("Failed to load config");
 
-    let (app, _state) = create_app(config);
+    let (app, state) = create_app(config);
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 8080);
     info!(%addr, "Server listening");
@@ -18,5 +18,10 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("Failed to bind to address");
-    axum::serve(listener, app).await.expect("Server error");
+    // Not `with_graceful_shutdown`: it waits for open WebSockets, which never close.
+    tokio::select! {
+        res = axum::serve(listener, app) => res.expect("Server error"),
+        () = shutdown_signal() => {},
+    }
+    shutdown(&state).await;
 }

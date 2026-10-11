@@ -19,7 +19,7 @@ embed = ["dep:rust-embed", "dep:mime_guess"]
 
 [dependencies]
 axum = { version = "0.8.9", features = ["ws", "http2"] }
-tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "rt", "sync", "time", "process", "net", "io-util"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "rt", "sync", "time", "process", "net", "io-util", "signal"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tower = "0.5.3"

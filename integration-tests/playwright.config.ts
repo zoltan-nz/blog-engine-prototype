@@ -35,6 +35,9 @@ export default defineConfig({
     url: 'http://localhost:8080/healthz',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // SIGTERM (not the default SIGKILL) lets the backend stop the Astro
+    // preview, which runs in its own process group and would be orphaned.
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     stdout: 'pipe',
     stderr: 'pipe',
     env: {

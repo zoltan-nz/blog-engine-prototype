@@ -20,7 +20,7 @@ Feature flag:
 | Module | Responsibility |
 |--------|----------------|
 | `agent` | Spike: drive Claude Code over ACP (`claude-agent-acp` via `npx`) to draft a post; fixed permission policy (edit `.md` in the blog dir only) |
-| `app` | Build the Axum `Router`, hydrate sites from disk into `AppState`, start a watcher per site |
+| `app` | Build the Axum `Router`, hydrate sites from disk into `AppState`, start a watcher per site; stop the preview on SIGINT/SIGTERM |
 | `config` | `SITES_DIR`, `PREVIEW_PORT`, `FRONTEND_DIR` via envy + dotenvy |
 | `routes` | HTTP route table: `/healthz`, `/ws`, `/site-files/{slug}/{*path}` |
 | `handlers/healthz` | Liveness probe |
