@@ -7,14 +7,7 @@ mod site_files;
 use backend::app::{create_app, shutdown, shutdown_signal};
 use backend::config::Config;
 use backend::telemetry;
-use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::Arc;
-use tracing::info;
-
-/// The webview uses IPC (`ipc.rs`) and the `site-files://` protocol
-/// (`site_files.rs`), so nothing in the app needs this server any more; it
-/// stays until a follow-up step removes it.
-const BACKEND_PORT: u16 = 8080;
 
 fn main() {
     telemetry::init_tracing();
@@ -23,22 +16,10 @@ fn main() {
 
     // create_app starts per-site watchers that spawn tokio tasks, so it must
     // run inside Tauri's runtime.
+    // No HTTP server: the webview talks over IPC (`ipc.rs`) and loads
+    // images through the `site-files://` protocol, which runs the router
+    // in-process.
     let (router, state) = tauri::async_runtime::block_on(async { create_app(config) });
-
-    // Bind before the window opens: a port already in use (e.g. a dev backend
-    // still running) fails startup with a clear error instead of a window
-    // whose socket never connects.
-    let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, BACKEND_PORT));
-    let listener = tauri::async_runtime::block_on(tokio::net::TcpListener::bind(addr))
-        .unwrap_or_else(|error| panic!("Failed to bind backend to {addr}: {error}"));
-    info!(%addr, "Backend listening");
-
-    let site_files_router = router.clone();
-    tauri::async_runtime::spawn(async move {
-        if let Err(error) = axum::serve(listener, router).await {
-            tracing::error!(%error, "backend server stopped");
-        }
-    });
 
     tauri::Builder::default()
         .manage(Arc::clone(&state))
@@ -47,7 +28,7 @@ fn main() {
         .register_asynchronous_uri_scheme_protocol(
             site_files::SCHEME,
             move |_ctx, request, responder| {
-                let router = site_files_router.clone();
+                let router = router.clone();
                 tauri::async_runtime::spawn(async move {
                     responder.respond(site_files::serve(router, request).await);
                 });

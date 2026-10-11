@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-svelte";
 import Footer from "./footer.svelte";
 
+const tauri = vi.hoisted(() => ({ isTauri: false }));
+vi.mock("@tauri-apps/api/core", () => ({ isTauri: () => tauri.isTauri }));
+
 vi.mock("#lib/state/socket.svelte.js", async () => {
   const { fakeSocket } = await import("#lib/test/mocks/socket.js");
   return {
@@ -14,6 +17,7 @@ vi.mock("#lib/state/socket.svelte.js", async () => {
 describe("Footer", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
+    tauri.isTauri = false;
   });
 
   it("shows Connected when the socket is open", async () => {
@@ -45,5 +49,14 @@ describe("Footer", () => {
     await expect
       .element(page.getByText("Backend: http://test-backend.test:8080"))
       .toBeInTheDocument();
+  });
+
+  it("shows an in-app backend on desktop without fetching healthz", async () => {
+    tauri.isTauri = true;
+
+    await render(Footer);
+
+    await expect.element(page.getByText("Backend: in-app")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

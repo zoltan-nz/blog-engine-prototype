@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { isTauri } from "@tauri-apps/api/core";
   import { backendUrl, getSocket } from "#lib/state/socket.svelte.js";
   import ThemeSelector from "./theme-selector/theme-selector.svelte";
   import FontSelector from "./font-selector/font-selector.svelte";
 
   const socket = getSocket();
+
+  // The desktop app runs the backend in-process with no HTTP server.
+  const desktop = isTauri();
 
   interface HealthMeta {
     serverName: string;
@@ -24,7 +28,7 @@
   }
 
   let health = $state<HealthMeta | null>(null);
-  fetchHealthMeta().then((meta) => (health = meta));
+  if (!desktop) fetchHealthMeta().then((meta) => (health = meta));
 
   let connected = $derived(socket.status === "open");
 </script>
@@ -38,7 +42,9 @@
   >
     <ThemeSelector />
     <FontSelector />
-    <span class="text-surface-600-400">Backend: {backendUrl}</span>
+    <span class="text-surface-600-400"
+      >Backend: {desktop ? "in-app" : backendUrl}</span
+    >
     <span class="text-surface-600-400">
       Server Name: {health?.serverName ?? "—"}
     </span>

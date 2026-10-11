@@ -22,7 +22,7 @@ One backend binary and one frontend SPA.
 |------|------|
 | `backend/` | Axum API, WS protocol, FSMs, Astro process control |
 | `frontend/` | SvelteKit admin UI |
-| `src-tauri/` | Tauri v2 desktop shell: serves the backend library on `127.0.0.1:8080` in-process, webview loads `frontend/build` |
+| `src-tauri/` | Tauri v2 desktop shell: runs the backend library in-process (no HTTP server; IPC plus `site-files://`), webview loads `frontend/build` |
 | `integration-tests/` | Playwright (host, not Docker) |
 | `.claude/specs/` | Historical design notes |
 

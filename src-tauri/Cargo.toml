@@ -9,7 +9,7 @@ tauri-build = { version = "2.7", features = [] }
 [dependencies]
 backend = { path = "../backend" }
 tauri = { version = "2.12", features = [] }
-tokio = { version = "1.52.3", features = ["net"] }
+tokio = { version = "1.52.3", features = ["sync"] }
 axum = "0.8.9"
 tracing = "0.1.44"
 tower = "0.5.3"
