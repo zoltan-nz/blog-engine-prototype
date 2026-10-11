@@ -16,6 +16,12 @@ tower = "0.5.3"
 serde = { version = "1.0.229", features = ["derive"] }
 envy = "0.4.2"
 dirs = "7.0.0"
+tauri-plugin-wdio-webdriver = { version = "=1.4.0", optional = true }
+
+[features]
+# Embedded WebDriver server on 127.0.0.1:4445 for the WebdriverIO E2E
+# tests. Opt-in, so dev and release builds never open that port.
+e2e = ["dep:tauri-plugin-wdio-webdriver"]
 
 [dev-dependencies]
 tokio = { version = "1.52.3", features = ["macros", "rt"] }

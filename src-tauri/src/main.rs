@@ -31,7 +31,13 @@ fn main() {
     // in-process.
     let (router, state) = tauri::async_runtime::block_on(async { create_app(config) });
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // Port comes from TAURI_WEBDRIVER_PORT (set by @wdio/tauri-service), else 4445.
+    #[cfg(feature = "e2e")]
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+
+    builder
         .manage(Arc::clone(&state))
         .manage(ipc::IpcConnection::default())
         .invoke_handler(tauri::generate_handler![ipc::connect, ipc::send])
